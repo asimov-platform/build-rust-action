@@ -43,28 +43,28 @@ runs:
       with:
         target: ${{ inputs.target }}
     - name: Install zig
-      if: ${{ inputs.use-zigbuild }}
+      if: ${{ inputs.use-zigbuild == 'true' }}
       uses: mlugg/setup-zig@v1
     - name: Install cargo-zigbuild
-      if: ${{ inputs.use-zigbuild }}
+      if: ${{ inputs.use-zigbuild == 'true' }}
       shell: bash
       run: cargo install --locked cargo-zigbuild
     - name: Build using cargo-zigbuild
-      if: ${{ inputs.use-zigbuild }}
+      if: ${{ inputs.use-zigbuild == 'true' }}
       shell: bash
       run: cargo zigbuild --release --target ${{ inputs.target }}
     - name: Build
-      if: ${{ !inputs.use-zigbuild }}
+      if: ${{ inputs.use-zigbuild != 'true' }}
       shell: bash
       run: cargo build --release --target ${{ inputs.target }}
     - name: Rename artifact
       shell: bash
       run: |
         mkdir output
-        mv target/${{ inputs.target }}/release/${{inputs.crate-name}}${{ contains(inputs.target, 'windows') && '.exe' || '' }} \
+        mv target/${{ inputs.target }}/release/${{ inputs.crate-name }}${{ contains(inputs.target, 'windows') && '.exe' || '' }} \
           output/${{ steps.globals.outputs.binary_name }}
     - name: Strip artifact (*nix)
-      if: ${{ inputs.strip }}
+      if: ${{ inputs.strip == 'true' }}
       working-directory: output
       shell: bash
       run: strip ${{ steps.globals.outputs.binary_name }}
