@@ -61,7 +61,7 @@ runs:
       shell: bash
       run: |
         mkdir output
-        mv target/${{ inputs.target }}/release/{inputs.crate-name}${{ contains(inputs.target, 'windows') && '.exe' || '' }} \
+        mv target/${{ inputs.target }}/release/${{inputs.crate-name}}${{ contains(inputs.target, 'windows') && '.exe' || '' }} \
           output/${{ steps.globals.outputs.binary_name }}
     - name: Strip artifact (*nix)
       if: ${{ inputs.strip }}
