@@ -1,0 +1,87 @@
+name: 'ASIMOV build rust action'
+author: 'ASIMOV by Haltia.AI <support@asimov.so>'
+description: 'Action to help automate building rust crates'
+inputs:
+  target:
+    description: 'Target to build'
+    required: true
+  artifact-name:
+    description: 'Name of the output artifact'
+    required: true
+  artifact-prefix:
+    description: 'Prefix for the output artifact name. Defaults to the repository name.'
+    required: false
+    default: ${{ github.event.repository.name }}
+  crate-name: # TODO: parse from Cargo.toml using yq
+    description: 'Name of the crate to build. Defaults to the repository name.'
+    required: false
+    default: ${{ github.event.repository.name }}
+  working-directory: # TODO
+    description: 'Working directory'
+    required: false
+    default: '.'
+  strip:
+    description: 'Strip symbols? Defaults to false.'
+    required: false
+    default: 'false'
+  use-zigbuild:
+    description: 'Use cargo-zigbuild? Defaults to false.'
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare environment
+      id: globals
+      shell: bash
+      run: |
+        echo "binary_name=${{ inputs.artifact-prefix }}${{ inputs.artifact-prefix && '-' || '' }}${{ inputs.artifact-name }}" >> $GITHUB_OUTPUT
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Install Rust and target
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        target: ${{ inputs.target }}
+    - name: Install zig
+      if: ${{ inputs.use-zigbuild }}
+      uses: mlugg/setup-zig@v1
+    - name: Install cargo-zigbuild
+      if: ${{ inputs.use-zigbuild }}
+      shell: bash
+      run: cargo install --locked cargo-zigbuild
+    - name: Build using cargo-zigbuild
+      if: ${{ inputs.use-zigbuild }}
+      shell: bash
+      run: cargo zigbuild --release --target ${{ inputs.target }}
+    - name: Build
+      if: ${{ !inputs.use-zigbuild }}
+      shell: bash
+      run: cargo build --release --target ${{ inputs.target }}
+    - name: Rename artifact
+      shell: bash
+      run: |
+        mkdir output
+        mv target/${{ inputs.target }}/release/{inputs.crate-name}${{ contains(inputs.target, 'windows') && '.exe' || '' }} \
+          output/${{ steps.globals.outputs.binary_name }}
+    - name: Strip artifact (*nix)
+      if: ${{ inputs.strip }}
+      working-directory: output
+      shell: bash
+      run: strip ${{ steps.globals.outputs.binary_name }}
+    - name: Compress artifact (*nix)
+      if: ${{ runner.os != 'windows' }}
+      working-directory: output
+      shell: bash
+      run: gzip -f ${{ steps.globals.outputs.binary_name }}
+    - name: Archive artifact (Windows)
+      if: ${{ runner.os == 'windows' }}
+      working-directory: output
+      shell: pwsh
+      run: | # FIXME: Rename artifact.exe.zip to artifact.zip
+        7z a -tzip -sdel ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.target }}
+        path: output/${{ steps.globals.outputs.binary_name }}
+        if-no-files-found: error
