@@ -83,5 +83,5 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.target }}
-        path: output/${{ steps.globals.outputs.binary_name }}
+        path: output/*
         if-no-files-found: error
