@@ -38,6 +38,12 @@ runs:
         echo "binary_name=${{ inputs.artifact-prefix }}${{ inputs.artifact-prefix && '-' || '' }}${{ inputs.artifact-name }}" >> $GITHUB_OUTPUT
     - name: Checkout repository
       uses: actions/checkout@v4
+    - name: Install MinGW
+      if: ${{ runner.os == 'linux' && inputs.target == 'x86_64-pc-windows-gnu' }}
+      shell: bash
+      run: |
+        # sudo apt-get update
+        sudo apt-get install -yq --no-install-recommends mingw-w64
     - name: Install Rust and target
       uses: dtolnay/rust-toolchain@stable
       with:
