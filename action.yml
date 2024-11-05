@@ -74,17 +74,20 @@ runs:
       working-directory: output
       shell: bash
       run: strip ${{ steps.globals.outputs.binary_name }}
-    - name: Compress artifact (*nix)
-      if: ${{ runner.os != 'windows' }}
+      # FIXME: Rename artifact.exe.zip to artifact.zip
+    - name: Compress or archive artifact
       working-directory: output
       shell: bash
-      run: gzip -f ${{ steps.globals.outputs.binary_name }}
-    - name: Archive artifact (Windows)
-      if: ${{ runner.os == 'windows' }}
-      working-directory: output
-      shell: pwsh
-      run: | # FIXME: Rename artifact.exe.zip to artifact.zip
-        7z a -tzip -sdel ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
+      env:
+        IS_TARGET_WINDOWS: ${{ contains(inputs.target, 'windows') }}
+      run: |
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          7z a -tzip -sdel ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
+        elif [ "$IS_TARGET_WINDOWS" = "true" ]; then
+          zip ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
+        else
+          gzip -f ${{ steps.globals.outputs.binary_name }}
+        fi
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
