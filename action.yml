@@ -84,7 +84,7 @@ runs:
         if [ "$RUNNER_OS" = "Windows" ]; then
           7z a -tzip -sdel ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
         elif [ "$IS_TARGET_WINDOWS" = "true" ]; then
-          zip ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
+          zip -m ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
         else
           gzip -f ${{ steps.globals.outputs.binary_name }}
         fi
