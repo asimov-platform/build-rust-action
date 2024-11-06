@@ -15,6 +15,9 @@ inputs:
   package-name:
     description: 'Name of the package. Default is parsed from Cargo.toml.'
     required: false
+  package-extension:
+    description: "Extension for the package output binary file. Defaults to empty string."
+    required: false
   working-directory:
     description: 'Working directory. Defaults to root.'
     required: false
@@ -52,9 +55,14 @@ runs:
       id: globals
       shell: bash
       run: |
-        echo "binary_name=${{ inputs.artifact-prefix }}${{ inputs.artifact-prefix && '-' || '' }}${{ inputs.artifact-name }}" >> $GITHUB_OUTPUT
         PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.yq.outputs.result }}"
+        BINARY_NAME="$PACKAGE_NAME${{ inputs.package-extension != '' && '.' || '' }}${{ inputs.package-extension }}"
+        ARTIFACT_NAME="${{ inputs.artifact-prefix }}${{ inputs.artifact-prefix && '-' || '' }}${{ inputs.artifact-name }}"
+        IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+        echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
+        echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+        echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
     - name: Checkout repository
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
