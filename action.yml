@@ -12,10 +12,9 @@ inputs:
     description: 'Prefix for the output artifact name. Defaults to the repository name.'
     required: false
     default: ${{ github.event.repository.name }}
-  crate-name: # TODO: parse from Cargo.toml using yq
-    description: 'Name of the crate to build. Defaults to the repository name.'
+  package-name:
+    description: 'Name of the package. Default is parsed from Cargo.toml.'
     required: false
-    default: ${{ github.event.repository.name }}
   working-directory:
     description: 'Working directory. Defaults to root.'
     required: false
@@ -31,11 +30,19 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Obtain package name
+      id: yq
+      if: ${{ inputs.package-name == '' }}
+      uses: mikefarah/yq@v4
+      with:
+        cmd: yq '.package.name' Cargo.toml
     - name: Prepare environment
       id: globals
       shell: bash
       run: |
         echo "binary_name=${{ inputs.artifact-prefix }}${{ inputs.artifact-prefix && '-' || '' }}${{ inputs.artifact-name }}" >> $GITHUB_OUTPUT
+        PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.yq.outputs.result }}"
+        echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Install MinGW
