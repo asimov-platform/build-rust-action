@@ -49,22 +49,27 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Install Rust and target
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        target: ${{ inputs.target }}
     - name: Checkout repository
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
       with:
         path: ${{ inputs.working-directory }}
     - name: Obtain package name
-      id: yq
+      id: jq
       if: ${{ inputs.package-name == '' }}
-      uses: mikefarah/yq@v4
-      with:
-        cmd: yq '.package.name' Cargo.toml
+      shell: bash
+      run: |
+        PACKAGE_NAME=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[].targets[] | select(.kind[] | contains("bin")) | .name')
+        echo "result=$PACKAGE_NAME" >> $GITHUB_OUTPUT
     - name: Prepare environment
       id: globals
       shell: bash
       run: |
-        PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.yq.outputs.result }}"
+        PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.jq.outputs.result }}"
         BINARY_NAME="$PACKAGE_NAME${{ inputs.package-extension != '' && '.' || '' }}${{ inputs.package-extension }}"
         ARTIFACT_NAME="${{ inputs.artifact-prefix }}${{ inputs.artifact-prefix && '-' || '' }}${{ inputs.artifact-name }}"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
@@ -78,10 +83,6 @@ runs:
       run: |
         # sudo apt-get update
         sudo apt-get install -yq --no-install-recommends mingw-w64
-    - name: Install Rust and target
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        target: ${{ inputs.target }}
     - name: Install zig
       if: ${{ inputs.use-zigbuild == 'true' }}
       uses: mlugg/setup-zig@v1
