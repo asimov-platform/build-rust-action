@@ -9,9 +9,8 @@ inputs:
     description: 'Name of the output artifact'
     required: true
   artifact-prefix:
-    description: 'Prefix for the output artifact name. Defaults to the repository name.'
+    description: 'Prefix for the output artifact name. Defaults to package name.'
     required: false
-    default: ${{ github.event.repository.name }}
   package-name:
     description: 'Name of the package. Default is parsed from Cargo.toml.'
     required: false
@@ -71,7 +70,8 @@ runs:
       run: |
         PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.jq.outputs.result }}"
         BINARY_NAME="$PACKAGE_NAME${{ inputs.package-extension != '' && '.' || '' }}${{ inputs.package-extension }}"
-        ARTIFACT_NAME="${{ inputs.artifact-prefix }}${{ inputs.artifact-prefix && '-' || '' }}${{ inputs.artifact-name }}"
+        ARTIFACT_PREFIX="${{ inputs.artifact-prefix != '' && inputs.artifact-prefix || '$PACKAGE_NAME' }}"
+        ARTIFACT_NAME="${ARTIFACT_PREFIX}-${{ inputs.artifact-name }}"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
         echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
@@ -118,7 +118,7 @@ runs:
       shell: bash
       run: |
         INPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.binary_name }}"
-        OUTPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.package_name }}"
+        OUTPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.artifact_name }}"
         if [ "$RUNNER_OS" = "Windows" ]; then
           OUTPUT_PATH="$OUTPUT_PATH.zip"
           7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
