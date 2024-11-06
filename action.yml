@@ -66,6 +66,8 @@ runs:
     - name: Checkout repository
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
+      with:
+        path: ${{ inputs.working-directory }}
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
@@ -85,42 +87,43 @@ runs:
       run: cargo install --locked cargo-zigbuild
     - name: Build using cargo-zigbuild
       if: ${{ inputs.use-zigbuild == 'true' }}
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: cargo zigbuild --release --target ${{ inputs.target }}
     - name: Build
       if: ${{ inputs.use-zigbuild != 'true' }}
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: cargo build --release --target ${{ inputs.target }}
     - name: Rename artifact
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         mkdir output
-        mv target/${{ inputs.target }}/release/${{ inputs.crate-name }}${{ contains(inputs.target, 'windows') && '.exe' || '' }} \
+        mv target/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} \
           output/${{ steps.globals.outputs.binary_name }}
     - name: Strip artifact
       if: ${{ inputs.strip == 'true' }}
-      working-directory: output
+      working-directory: ${{ inputs.working-directory }}/output
       shell: bash
       run: strip ${{ steps.globals.outputs.binary_name }}
-      # FIXME: Rename artifact.exe.zip to artifact.zip
     - name: Compress or archive artifact
-      working-directory: output
       if: ${{ inputs.compress-artifact == 'true' }}
       shell: bash
-      env:
-        IS_TARGET_WINDOWS: ${{ contains(inputs.target, 'windows') }}
       run: |
+        INPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.binary_name }}"
+        OUTPUT_PATH=${{ inputs.working-directory }}/output/${{ steps.globals.outputs.package_name }}"
         if [ "$RUNNER_OS" = "Windows" ]; then
-          7z a -tzip -sdel ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
-        elif [ "$IS_TARGET_WINDOWS" = "true" ]; then
-          zip -m ${{ steps.globals.outputs.binary_name }}.zip ${{ steps.globals.outputs.binary_name }}
+          7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
+        elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
+          zip -m "$OUTPUT_PATH" "$INPUT_PATH"
         else
-          gzip -f ${{ steps.globals.outputs.binary_name }}
+          gzip -f "$INPUT_PATH"
         fi
     - name: Upload artifact
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.target }}
-        path: output/*
+        path: ${{ inputs.working-directory }}/output/*
         if-no-files-found: error
