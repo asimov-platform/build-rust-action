@@ -67,7 +67,7 @@ runs:
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
     - name: Install MinGW
-      if: ${{ runner.os == 'linux' && inputs.target == 'x86_64-pc-windows-gnu' }}
+      if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
       run: |
         # sudo apt-get update
