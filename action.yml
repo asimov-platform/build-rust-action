@@ -42,6 +42,10 @@ inputs:
     description: 'Upload artifact? Defaults to true.'
     required: false
     default: 'true'
+outputs:
+  artifact-path:
+    description: 'Path to the output artifact.'
+    value: ${{ steps.finalize.outputs.artifact-path }}
 runs:
   using: 'composite'
   steps:
@@ -108,18 +112,23 @@ runs:
       shell: bash
       run: strip ${{ steps.globals.outputs.binary_name }}
     - name: Compress or archive artifact
+      id: compress
       if: ${{ inputs.compress-artifact == 'true' }}
       shell: bash
       run: |
         INPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.binary_name }}"
         OUTPUT_PATH=${{ inputs.working-directory }}/output/${{ steps.globals.outputs.package_name }}"
         if [ "$RUNNER_OS" = "Windows" ]; then
+          OUTPUT_PATH="$OUTPUT_PATH.zip"
           7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
         elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
+          OUTPUT_PATH="$OUTPUT_PATH.zip"
           zip -m "$OUTPUT_PATH" "$INPUT_PATH"
         else
+          OUTPUT_PATH="$OUTPUT_PATH.gz"
           gzip -f "$INPUT_PATH"
         fi
+        echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
     - name: Upload artifact
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v4
@@ -127,3 +136,12 @@ runs:
         name: ${{ inputs.target }}
         path: ${{ inputs.working-directory }}/output/*
         if-no-files-found: error
+    - name: Write outputs
+      id: finalize
+      shell: bash
+      run: |
+        if [ "${{ inputs.compress-artifact }}" == "true" ]; then
+          echo "artifact-path=${{ steps.compress.outputs.output-path }}" >> $GITHUB_OUTPUT
+        else
+          echo "artifact-path=${{ steps.globals.outputs.binary_name }}" >> $GITHUB_OUTPUT
+        fi
