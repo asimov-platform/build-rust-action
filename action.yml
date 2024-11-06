@@ -49,6 +49,11 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Checkout repository
+      if: ${{ inputs.checkout == 'true' }}
+      uses: actions/checkout@v4
+      with:
+        path: ${{ inputs.working-directory }}
     - name: Obtain package name
       id: yq
       if: ${{ inputs.package-name == '' }}
@@ -67,11 +72,6 @@ runs:
         echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
         echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
         echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
-    - name: Checkout repository
-      if: ${{ inputs.checkout == 'true' }}
-      uses: actions/checkout@v4
-      with:
-        path: ${{ inputs.working-directory }}
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
