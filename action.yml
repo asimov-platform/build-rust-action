@@ -3,7 +3,7 @@ author: 'ASIMOV by Haltia.AI <support@asimov.so>'
 description: 'Action to help automate building rust crates'
 inputs:
   target:
-    description: 'Target to build'
+    description: 'Target to build.'
     required: true
   artifact-name:
     description: 'Name of the output artifact'
@@ -16,8 +16,8 @@ inputs:
     description: 'Name of the crate to build. Defaults to the repository name.'
     required: false
     default: ${{ github.event.repository.name }}
-  working-directory: # TODO
-    description: 'Working directory'
+  working-directory:
+    description: 'Working directory. Defaults to root.'
     required: false
     default: '.'
   strip:
