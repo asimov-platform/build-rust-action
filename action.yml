@@ -27,6 +27,10 @@ inputs:
     description: 'Use cargo-zigbuild? Defaults to false.'
     required: false
     default: 'false'
+  compress-artifact:
+    description: 'Compress artifact? Defaults to true.'
+    required: false
+    default: 'true'
 runs:
   using: 'composite'
   steps:
@@ -84,6 +88,7 @@ runs:
       # FIXME: Rename artifact.exe.zip to artifact.zip
     - name: Compress or archive artifact
       working-directory: output
+      if: ${{ inputs.compress-artifact == 'true' }}
       shell: bash
       env:
         IS_TARGET_WINDOWS: ${{ contains(inputs.target, 'windows') }}
