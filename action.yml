@@ -19,6 +19,10 @@ inputs:
     description: 'Working directory. Defaults to root.'
     required: false
     default: '.'
+  checkout:
+    description: 'Checkout repository? Defaults to true.'
+    required: false
+    default: 'true'
   strip:
     description: 'Strip symbols? Defaults to false.'
     required: false
@@ -52,6 +56,7 @@ runs:
         PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.yq.outputs.result }}"
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
     - name: Checkout repository
+      if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
     - name: Install MinGW
       if: ${{ runner.os == 'linux' && inputs.target == 'x86_64-pc-windows-gnu' }}
