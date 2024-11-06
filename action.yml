@@ -118,7 +118,7 @@ runs:
       shell: bash
       run: |
         INPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.binary_name }}"
-        OUTPUT_PATH=${{ inputs.working-directory }}/output/${{ steps.globals.outputs.package_name }}"
+        OUTPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.package_name }}"
         if [ "$RUNNER_OS" = "Windows" ]; then
           OUTPUT_PATH="$OUTPUT_PATH.zip"
           7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
