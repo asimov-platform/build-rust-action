@@ -31,6 +31,10 @@ inputs:
     description: 'Compress artifact? Defaults to true.'
     required: false
     default: 'true'
+  upload-artifact:
+    description: 'Upload artifact? Defaults to true.'
+    required: false
+    default: 'true'
 runs:
   using: 'composite'
   steps:
@@ -101,6 +105,7 @@ runs:
           gzip -f ${{ steps.globals.outputs.binary_name }}
         fi
     - name: Upload artifact
+      if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.target }}
