@@ -76,8 +76,8 @@ runs:
         ARTIFACT_NAME_EXT="$ARTIFACT_NAME$EXT"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
         OUTPUT_DIR="output"
-        OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/${{ steps.globals.outputs.artifact_name }}"
-        OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/${{ steps.globals.outputs.artifact_name_ext }}"
+        OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
+        OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
         echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
         echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
