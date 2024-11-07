@@ -139,7 +139,7 @@ runs:
           7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
         elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
           OUTPUT_PATH="$OUTPUT_PATH.zip"
-          zip -m "$OUTPUT_PATH" "$INPUT_PATH"
+          zip -mj "$OUTPUT_PATH" "$INPUT_PATH"
         else
           OUTPUT_PATH="$OUTPUT_PATH.gz"
           gzip -f "$INPUT_PATH"
