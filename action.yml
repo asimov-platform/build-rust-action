@@ -76,6 +76,7 @@ runs:
         ARTIFACT_NAME_EXT="$ARTIFACT_NAME$EXT"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
         OUTPUT_DIR="output"
+        OUTPUT_BIINARY_PATH="${OUTPUT_DIR}/$BINARY_NAME"
         OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
         OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
@@ -84,6 +85,7 @@ runs:
         echo "artifact_name_ext=$ARTIFACT_NAME_EXT" >> $GITHUB_OUTPUT
         echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
         echo "output_dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
+        echo "output_binary_path=$OUTPUT_BIINARY_PATH" >> $GITHUB_OUTPUT
         echo "output_artifact_path=$OUTPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
     - name: Install MinGW
@@ -126,8 +128,12 @@ runs:
       if: ${{ inputs.compress-artifact == 'true' }}
       shell: bash
       run: |
-        INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}"
+        ARTIFACT_PATH="${{ steps.globals.outputs.output_artifact_path_ext }}"
+        INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_binary_path }}"
         OUTPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path }}"
+
+        mv "$ARTIFACT_PATH" "$INPUT_PATH"
+
         if [ "$RUNNER_OS" = "Windows" ]; then
           OUTPUT_PATH="$OUTPUT_PATH.zip"
           7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
@@ -137,7 +143,9 @@ runs:
         else
           OUTPUT_PATH="$OUTPUT_PATH.gz"
           gzip -f "$INPUT_PATH"
+          mv "$INPUT_PATH.gz" "$OUTPUT_PATH"
         fi
+
         echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
     - name: Upload artifact
       if: ${{ inputs.upload-artifact == 'true' }}
