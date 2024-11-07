@@ -126,7 +126,7 @@ runs:
       if: ${{ inputs.compress-artifact == 'true' }}
       shell: bash
       run: |
-        INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}
+        INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}"
         OUTPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path }}"
         if [ "$RUNNER_OS" = "Windows" ]; then
           OUTPUT_PATH="$OUTPUT_PATH.zip"
