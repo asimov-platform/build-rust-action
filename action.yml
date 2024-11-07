@@ -68,15 +68,24 @@ runs:
       id: globals
       shell: bash
       run: |
+        EXT="${{ inputs.package-extension != '' && '.' || '' }}${{ inputs.package-extension }}"
         PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.jq.outputs.result }}"
-        BINARY_NAME="$PACKAGE_NAME${{ inputs.package-extension != '' && '.' || '' }}${{ inputs.package-extension }}"
+        BINARY_NAME="$PACKAGE_NAME$EXT"
         ARTIFACT_PREFIX="${{ inputs.artifact-prefix != '' && inputs.artifact-prefix || '$PACKAGE_NAME' }}"
         ARTIFACT_NAME="${ARTIFACT_PREFIX}-${{ inputs.artifact-name }}"
+        ARTIFACT_NAME_EXT="$ARTIFACT_NAME$EXT"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
+        OUTPUT_DIR="output"
+        OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/${{ steps.globals.outputs.artifact_name }}"
+        OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/${{ steps.globals.outputs.artifact_name_ext }}"
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
         echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
         echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+        echo "artifact_name_ext=$ARTIFACT_NAME_EXT" >> $GITHUB_OUTPUT
         echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
+        echo "output_dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
+        echo "output_artifact_path=$OUTPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
+        echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
@@ -100,25 +109,25 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: cargo build --release --target ${{ inputs.target }}
-    - name: Rename artifact
+    - name: Move artifact
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        mkdir output
+        mkdir ${{ steps.globals.outputs.output_dir }}
         mv target/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} \
-          output/${{ steps.globals.outputs.binary_name }}
+          ${{ steps.globals.outputs.output_artifact_path_ext }}
     - name: Strip artifact
       if: ${{ inputs.strip == 'true' }}
-      working-directory: ${{ inputs.working-directory }}/output
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: strip ${{ steps.globals.outputs.binary_name }}
+      run: strip ${{ steps.globals.outputs.output_artifact_path_ext }}
     - name: Compress or archive artifact
       id: compress
       if: ${{ inputs.compress-artifact == 'true' }}
       shell: bash
       run: |
-        INPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.binary_name }}"
-        OUTPUT_PATH="${{ inputs.working-directory }}/output/${{ steps.globals.outputs.artifact_name }}"
+        INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}
+        OUTPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path }}"
         if [ "$RUNNER_OS" = "Windows" ]; then
           OUTPUT_PATH="$OUTPUT_PATH.zip"
           7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
@@ -135,7 +144,7 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.target }}
-        path: ${{ inputs.working-directory }}/output/*
+        path: ${{ inputs.working-directory }}/${{ steps.globals.outputs.output_dir }}/*
         if-no-files-found: error
     - name: Write outputs
       id: finalize
@@ -144,5 +153,5 @@ runs:
         if [ "${{ inputs.compress-artifact }}" == "true" ]; then
           echo "artifact-path=${{ steps.compress.outputs.output-path }}" >> $GITHUB_OUTPUT
         else
-          echo "artifact-path=${{ steps.globals.outputs.binary_name }}" >> $GITHUB_OUTPUT
+          echo "artifact-path=${{ steps.globals.outputs.output_artifact_path_ext }}" >> $GITHUB_OUTPUT
         fi
