@@ -25,6 +25,10 @@ inputs:
     description: 'Checkout repository? Defaults to true.'
     required: false
     default: 'true'
+  extra-build-arguments:
+    description: 'Extra arguments to pass to cargo build. Defaults to empty string.'
+    required: false
+    default: ''
   strip:
     description: 'Strip symbols? Defaults to false.'
     required: false
@@ -105,12 +109,12 @@ runs:
       if: ${{ inputs.use-zigbuild == 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: cargo zigbuild --release --target ${{ inputs.target }}
+      run: cargo zigbuild --release --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Build
       if: ${{ inputs.use-zigbuild != 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: cargo build --release --target ${{ inputs.target }}
+      run: cargo build --release --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact
       working-directory: ${{ inputs.working-directory }}
       shell: bash
