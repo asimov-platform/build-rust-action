@@ -6,7 +6,7 @@ inputs:
     description: 'Target to build.'
     required: true
   artifact-name:
-    description: 'Name of the output artifact'
+    description: 'Name of the output artifact. Must be unique.'
     required: true
   artifact-prefix:
     description: 'Prefix for the output artifact name. Defaults to package name.'
@@ -155,7 +155,7 @@ runs:
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.target }}
+        name: ${{ inputs.artifact-name }}
         path: ${{ inputs.working-directory }}/${{ steps.globals.outputs.output_dir }}/*
         if-no-files-found: error
     - name: Write outputs
