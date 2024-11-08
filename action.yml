@@ -25,6 +25,10 @@ inputs:
     description: 'Checkout repository? Defaults to true.'
     required: false
     default: 'true'
+  rust-toolchain:
+    description: 'Rust toolchain to use. Defaults to stable.'
+    required: false
+    default: 'stable'
   extra-build-arguments:
     description: 'Extra arguments to pass to cargo build. Defaults to empty string.'
     required: false
@@ -53,8 +57,10 @@ runs:
   using: 'composite'
   steps:
     - name: Install Rust and target
-      uses: dtolnay/rust-toolchain@stable
+      id: toolchain
+      uses: dtolnay/rust-toolchain@master
       with:
+        toolchain: ${{ inputs.rust-toolchain }}
         target: ${{ inputs.target }}
     - name: Checkout repository
       if: ${{ inputs.checkout == 'true' }}
@@ -109,12 +115,12 @@ runs:
       if: ${{ inputs.use-zigbuild == 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: cargo zigbuild --release --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
+      run: cargo +${{ steps.toolchain.outputs.name }} zigbuild --release --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Build
       if: ${{ inputs.use-zigbuild != 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: cargo build --release --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
+      run: cargo +${{ steps.toolchain.outputs.name }} build --release --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact
       working-directory: ${{ inputs.working-directory }}
       shell: bash
