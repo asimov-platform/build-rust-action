@@ -53,6 +53,12 @@ outputs:
   artifact-path:
     description: 'Path to an Artifact.'
     value: ${{ steps.finalize.outputs.artifact-path }}
+  artifact-id:
+    description: 'GitHub ID of an Artifact, can be used by the REST API.'
+    value: ${{ steps.upload.outputs.artifact-id }}
+  artifact-url:
+    description: 'URL to download an Artifact.'
+    value: ${{ steps.upload.outputs.artifact-url }}
 runs:
   using: 'composite'
   steps:
@@ -158,6 +164,7 @@ runs:
 
         echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
     - name: Upload artifact
+      id: upload
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
