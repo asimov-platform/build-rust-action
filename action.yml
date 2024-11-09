@@ -3,10 +3,10 @@ author: 'ASIMOV by Haltia.AI <support@asimov.so>'
 description: 'Action to help automate building rust crates'
 inputs:
   target:
-    description: 'Target to build.'
+    description: 'Target to build for.'
     required: true
   artifact-name:
-    description: 'Name of the output artifact. Must be unique.'
+    description: 'Name of the output artifact. Must be unique. Prefixed with artifact-prefix.'
     required: true
   artifact-prefix:
     description: 'Prefix for the output artifact name. Defaults to package name.'
@@ -51,7 +51,7 @@ inputs:
     default: 'true'
 outputs:
   artifact-path:
-    description: 'Path to the output artifact.'
+    description: 'Path to an Artifact.'
     value: ${{ steps.finalize.outputs.artifact-path }}
 runs:
   using: 'composite'
