@@ -29,16 +29,16 @@ inputs:
     description: 'Rust toolchain to use. Defaults to stable.'
     required: false
     default: 'stable'
+  use-zigbuild:
+    description: 'Use cargo-zigbuild? Defaults to false.'
+    required: false
+    default: 'false'
   extra-build-arguments:
     description: 'Extra arguments to pass to cargo build. Defaults to empty string.'
     required: false
     default: ''
-  strip:
+  strip-artifact:
     description: 'Strip symbols? Defaults to false.'
-    required: false
-    default: 'false'
-  use-zigbuild:
-    description: 'Use cargo-zigbuild? Defaults to false.'
     required: false
     default: 'false'
   compress-artifact:
@@ -135,7 +135,7 @@ runs:
         mv target/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} \
           ${{ steps.globals.outputs.output_artifact_path_ext }}
     - name: Strip artifact
-      if: ${{ inputs.strip == 'true' }}
+      if: ${{ inputs.strip-artifact == 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: strip ${{ steps.globals.outputs.output_artifact_path_ext }}
