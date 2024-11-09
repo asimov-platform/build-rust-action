@@ -14,8 +14,8 @@ inputs:
   package-name:
     description: 'Name of the package. Default is parsed from Cargo.toml.'
     required: false
-  package-extension:
-    description: "Extension for the package output binary file. Defaults to empty string."
+  binary-extension:
+    description: "Extension for the output binary file. Defaults to empty string."
     required: false
   working-directory:
     description: 'Working directory. Defaults to root.'
@@ -84,7 +84,7 @@ runs:
       id: globals
       shell: bash
       run: |
-        EXT="${{ inputs.package-extension != '' && '.' || '' }}${{ inputs.package-extension }}"
+        EXT="${{ inputs.binary-extension != '' && '.' || '' }}${{ inputs.binary-extension }}"
         PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.jq.outputs.result }}"
         BINARY_NAME="$PACKAGE_NAME$EXT"
         ARTIFACT_PREFIX="${{ inputs.artifact-prefix != '' && inputs.artifact-prefix || '$PACKAGE_NAME' }}"
