@@ -15,6 +15,11 @@ Most of the times you would want to use this action in combination with [asimov-
 - Stripping & compressing.
 - And more (see [Inputs](#inputs))!
 
+> [!IMPORTANT]
+> Please note that the strategy I use to select correct package to build is very naive and
+> probably will not work if you have a workspace. In that case please use
+> the `package-name` input to specify it instead.
+
 ## Tested runners and targets
 
 ### Ubuntu 24.04
