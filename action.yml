@@ -76,6 +76,7 @@ runs:
     - name: Obtain package name
       id: jq
       if: ${{ inputs.package-name == '' }}
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         PACKAGE_NAME=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[].targets[] | select(.kind[] | contains("bin")) | .name')
