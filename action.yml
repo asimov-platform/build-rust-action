@@ -122,12 +122,12 @@ runs:
       if: ${{ inputs.use-zigbuild == 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: cargo +${{ steps.toolchain.outputs.name }} zigbuild --release --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
+      run: cargo +${{ steps.toolchain.outputs.name }} zigbuild --release --package ${{ steps.globals.outputs.package_name }} --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Build
       if: ${{ inputs.use-zigbuild != 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: cargo +${{ steps.toolchain.outputs.name }} build --release --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
+      run: cargo +${{ steps.toolchain.outputs.name }} build --release --package ${{ steps.globals.outputs.package_name }} --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact
       working-directory: ${{ inputs.working-directory }}
       shell: bash
