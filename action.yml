@@ -96,6 +96,7 @@ runs:
         echo "result=$PACKAGE_NAME" >> $GITHUB_OUTPUT
     - name: Prepare environment
       id: globals
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         EXT="${{ inputs.binary-extension != '' && '.' || '' }}${{ inputs.binary-extension }}"
