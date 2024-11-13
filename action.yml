@@ -14,6 +14,9 @@ inputs:
   package-name:
     description: 'Name of the package. Default is parsed from Cargo.toml.'
     required: false
+  binary-name:
+    description: 'Name of the output binary file. Defaults to package name with extension.'
+    required: false
   binary-extension:
     description: "Extension for the output binary file. Defaults to empty string."
     required: false
@@ -97,7 +100,7 @@ runs:
       run: |
         EXT="${{ inputs.binary-extension != '' && '.' || '' }}${{ inputs.binary-extension }}"
         PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.jq.outputs.result }}"
-        BINARY_NAME="$PACKAGE_NAME$EXT"
+        BINARY_NAME="${{ inputs.binary-name != '' && inputs.binary-name || '$PACKAGE_NAME' }}$EXT"
         ARTIFACT_PREFIX="${{ inputs.artifact-prefix != '' && inputs.artifact-prefix || '$PACKAGE_NAME' }}"
         ARTIFACT_NAME="${ARTIFACT_PREFIX}-${{ inputs.artifact-name }}"
         ARTIFACT_NAME_EXT="$ARTIFACT_NAME$EXT"
