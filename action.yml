@@ -79,7 +79,17 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        PACKAGE_NAME=$(cargo metadata --format-version 1 --no-deps | jq -r 'first(.packages[] | select(.targets[].kind[] | contains("bin"))) | .name')
+        METADATA=$(cargo metadata --format-version 1 --no-deps)
+        VALID_TARGETS=$(echo "$METADATA" | jq -r '. as $root | .packages[] | select(.id | IN($root.workspace_default_members[])) | select(.targets[].kind[] | contains("bin")) | .name')
+        VALID_TARGETS_COUNT=$(echo "$VALID_TARGETS" | wc -l)
+        if [ "$VALID_TARGETS_COUNT" -eq 0 ]; then
+          echo "::error::No valid targets found. Please specify package-name input."
+          exit 1
+        elif [ "$VALID_TARGETS_COUNT" -gt 1 ]; then
+          echo "::error::Multiple valid targets found. Please specify package-name input."
+          exit 1
+        fi
+        PACKAGE_NAME=$(echo "$VALID_TARGETS" | head -n 1)
         echo "result=$PACKAGE_NAME" >> $GITHUB_OUTPUT
     - name: Prepare environment
       id: globals
