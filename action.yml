@@ -96,6 +96,7 @@ runs:
         OUTPUT_BIINARY_PATH="${OUTPUT_DIR}/$BINARY_NAME"
         OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
         OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
+        TARGET_DIR=$(cargo metadata --format-version 1 --no-deps | jq -r '.target_directory')
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
         echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
         echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
@@ -105,6 +106,7 @@ runs:
         echo "output_binary_path=$OUTPUT_BIINARY_PATH" >> $GITHUB_OUTPUT
         echo "output_artifact_path=$OUTPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
+        echo "target_dir=$TARGET_DIR" >> $GITHUB_OUTPUT
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
@@ -133,7 +135,7 @@ runs:
       shell: bash
       run: |
         mkdir ${{ steps.globals.outputs.output_dir }}
-        mv target/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} \
+        mv ${{ steps.globals.outputs.target_dir }}/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} \
           ${{ steps.globals.outputs.output_artifact_path_ext }}
     - name: Strip artifact
       if: ${{ inputs.strip-artifact == 'true' }}
