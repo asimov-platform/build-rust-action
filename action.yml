@@ -161,7 +161,7 @@ runs:
       if: ${{ inputs.compress-artifact == 'true' }}
       shell: bash
       run: |
-        ARTIFACT_PATH="${{ steps.globals.outputs.output_artifact_path_ext }}"
+        ARTIFACT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}"
         INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_binary_path }}"
         OUTPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path }}"
 
@@ -195,5 +195,5 @@ runs:
         if [ "${{ inputs.compress-artifact }}" == "true" ]; then
           echo "artifact-path=${{ steps.compress.outputs.output-path }}" >> $GITHUB_OUTPUT
         else
-          echo "artifact-path=${{ steps.globals.outputs.output_artifact_path_ext }}" >> $GITHUB_OUTPUT
+          echo "artifact-path=${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}" >> $GITHUB_OUTPUT
         fi
