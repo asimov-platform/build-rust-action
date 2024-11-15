@@ -125,7 +125,7 @@ runs:
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
       run: |
-        # sudo apt-get update
+        sudo apt-get update
         sudo apt-get install -yq --no-install-recommends mingw-w64
     - name: Install zig
       if: ${{ inputs.use-zigbuild == 'true' }}
