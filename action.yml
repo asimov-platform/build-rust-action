@@ -132,12 +132,13 @@ runs:
         sudo apt-get update
         sudo apt-get install -yq --no-install-recommends mingw-w64
     - name: Install macOS SDK
+      id: macos-sdk
       if: ${{ inputs.install-macos-sdk == 'true' }}
       shell: bash
       working-directory: ${{ runner.temp }}
       run: |
         curl -L https://github.com/roblabla/MacOSX-SDKs/releases/download/13.3/MacOSX13.3.sdk.tar.xz | tar xJ
-        export SDKROOT=$(pwd)/MacOSX13.3.sdk/
+        echo "root=$(pwd)/MacOSX13.3.sdk/" >> $GITHUB_OUTPUT
     - name: Install zig
       if: ${{ inputs.use-zigbuild == 'true' }}
       uses: mlugg/setup-zig@v1
@@ -145,16 +146,12 @@ runs:
       if: ${{ inputs.use-zigbuild == 'true' }}
       shell: bash
       run: cargo install --locked cargo-zigbuild
-    - name: Build using cargo-zigbuild
-      if: ${{ inputs.use-zigbuild == 'true' }}
-      working-directory: ${{ inputs.working-directory }}
-      shell: bash
-      run: cargo +${{ steps.toolchain.outputs.name }} zigbuild --release --package ${{ steps.globals.outputs.package_name }} --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Build
-      if: ${{ inputs.use-zigbuild != 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: cargo +${{ steps.toolchain.outputs.name }} build --release --package ${{ steps.globals.outputs.package_name }} --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
+      run: |
+        BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || 'build' }}"
+        cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --release --package ${{ steps.globals.outputs.package_name }} --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact
       working-directory: ${{ inputs.working-directory }}
       shell: bash
