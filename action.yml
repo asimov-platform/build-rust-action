@@ -151,6 +151,7 @@ runs:
       shell: bash
       run: |
         BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || 'build' }}"
+        export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
         cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --release --package ${{ steps.globals.outputs.package_name }} --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact
       working-directory: ${{ inputs.working-directory }}
