@@ -33,7 +33,7 @@ inputs:
     required: false
     default: 'stable'
   install-macos-sdk:
-    description: 'Install macOS SDK? Defaults to false.'
+    description: 'Install MacOS SDK? Defaults to false.'
     required: false
     default: 'false'
   use-zigbuild:

@@ -11,6 +11,7 @@ Most of the times you would want to use this action in combination with [asimov-
 - Support for cross-compilation.
 - Support for [cargo-zigbuild](https://github.com/rust-cross/cargo-zigbuild).
 - Rust toolchain selection (channel, version, etc).
+- Installing MacOS SDK if needed.
 - Automatically installs [MinGW](https://www.mingw-w64.org/) if needed.
 - Stripping & compressing.
 - And more (see [Inputs](#inputs))!
@@ -87,6 +88,10 @@ Most of the times you would want to use this action in combination with [asimov-
     # Rust toolchain to use.
     # Optional. Defaults to stable.
     rust-toolchain:
+
+    # Install MacOS SDK?
+    # Optional. Defaults to false.
+    install-macos-sdk:
 
     # Use cargo-zigbuild?
     # Optional. Defaults to false.
