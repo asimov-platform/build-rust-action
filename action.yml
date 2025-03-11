@@ -1,73 +1,77 @@
-name: 'ASIMOV build rust action'
-author: 'ASIMOV by Haltia.AI <support@asimov.so>'
-description: 'Action to help automate building rust crates'
+name: "ASIMOV build rust action"
+author: "ASIMOV by Haltia.AI <support@asimov.so>"
+description: "Action to help automate building rust crates"
 inputs:
   target:
-    description: 'Target to build for.'
+    description: "Target to build for."
     required: true
+  glibc-version:
+    description: "Version of GLIBC to link to. Only works on Linux and using zigbuild. Defaults to system default."
+    required: false
+    default: ""
   artifact-name:
-    description: 'Name of the output artifact. Must be unique. Prefixed with artifact-prefix.'
+    description: "Name of the output artifact. Must be unique. Prefixed with artifact-prefix."
     required: true
   artifact-prefix:
-    description: 'Prefix for the output artifact name. Defaults to package name.'
+    description: "Prefix for the output artifact name. Defaults to package name."
     required: false
   package-name:
-    description: 'Name of the package. Default is parsed from Cargo.toml.'
+    description: "Name of the package. Default is parsed from Cargo.toml."
     required: false
   binary-name:
-    description: 'Name of the output binary file. Defaults to package name with extension.'
+    description: "Name of the output binary file. Defaults to package name with extension."
     required: false
   binary-extension:
     description: "Extension for the output binary file. Defaults to empty string."
     required: false
   working-directory:
-    description: 'Working directory. Defaults to root.'
+    description: "Working directory. Defaults to root."
     required: false
-    default: '.'
+    default: "."
   checkout:
-    description: 'Checkout repository? Defaults to true.'
+    description: "Checkout repository? Defaults to true."
     required: false
-    default: 'true'
+    default: "true"
   rust-toolchain:
-    description: 'Rust toolchain to use. Defaults to stable.'
+    description: "Rust toolchain to use. Defaults to stable."
     required: false
-    default: 'stable'
+    default: "stable"
   install-macos-sdk:
-    description: 'Install MacOS SDK? Defaults to false.'
+    description: "Install MacOS SDK? Defaults to false."
     required: false
-    default: 'false'
+    default: "false"
   use-zigbuild:
-    description: 'Use cargo-zigbuild? Defaults to false.'
+    description: "Use cargo-zigbuild? Defaults to false."
     required: false
-    default: 'false'
+    default: "false"
   extra-build-arguments:
-    description: 'Extra arguments to pass to cargo build. Defaults to empty string.'
+    description: "Extra arguments to pass to cargo build. Defaults to empty string."
     required: false
-    default: ''
+    default: ""
   strip-artifact:
-    description: 'Strip symbols? Defaults to false.'
+    description: "Strip symbols? Defaults to false."
     required: false
-    default: 'false'
+    default: "false"
   compress-artifact:
-    description: 'Compress artifact? Defaults to true.'
+    description: "Compress artifact? Defaults to true."
     required: false
-    default: 'true'
+    default: "true"
   upload-artifact:
-    description: 'Upload artifact? Defaults to true.'
+    description: "Upload artifact? Defaults to true."
     required: false
-    default: 'true'
+    default: "true"
 outputs:
   artifact-path:
-    description: 'Path to an Artifact.'
+    description: "Path to an Artifact."
     value: ${{ steps.finalize.outputs.artifact-path }}
   artifact-id:
-    description: 'GitHub ID of an Artifact, can be used by the REST API.'
+    description: "GitHub ID of an Artifact, can be used by the REST API."
     value: ${{ steps.upload.outputs.artifact-id }}
   artifact-url:
-    description: 'URL to download an Artifact.'
+    description: "URL to download an Artifact."
     value: ${{ steps.upload.outputs.artifact-url }}
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Install Rust and target
       id: toolchain
@@ -104,6 +108,7 @@ runs:
       shell: bash
       run: |
         EXT="${{ inputs.binary-extension != '' && '.' || '' }}${{ inputs.binary-extension }}"
+        TARGET_WITH_GLIBC="${{ inputs.target }}${{ inputs.glibc-version != '' && '.' || '' }}${{ inputs.glibc-version }}"
         PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.jq.outputs.result }}"
         BINARY_NAME="${{ inputs.binary-name != '' && inputs.binary-name || '$PACKAGE_NAME' }}$EXT"
         ARTIFACT_PREFIX="${{ inputs.artifact-prefix != '' && inputs.artifact-prefix || '$PACKAGE_NAME' }}"
@@ -115,6 +120,7 @@ runs:
         OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
         OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
         TARGET_DIR=$(cargo metadata --format-version 1 --no-deps | jq -r '.target_directory')
+        echo "target_with_glibc=$TARGET_WITH_GLIBC" >> $GITHUB_OUTPUT
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
         echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
         echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
@@ -152,7 +158,7 @@ runs:
       run: |
         BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || 'build' }}"
         export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
-        cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --release --package ${{ steps.globals.outputs.package_name }} --target ${{ inputs.target }} ${{ inputs.extra-build-arguments }}
+        cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --release --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact
       working-directory: ${{ inputs.working-directory }}
       shell: bash

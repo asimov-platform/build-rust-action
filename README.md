@@ -60,6 +60,12 @@ Most of the times you would want to use this action in combination with [asimov-
     # Required.
     target:
 
+    # Version of GLIBC to link to.
+    # Only works on Linux and using zigbuild.
+    # Defaults to system default.
+    # Optional.
+    glibc-version:
+
     # Name of the output artifact. Must be unique.
     # Prefixed with artifact-prefix.
     # Required.
