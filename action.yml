@@ -152,6 +152,12 @@ runs:
       if: ${{ inputs.use-zigbuild == 'true' }}
       shell: bash
       run: cargo install --locked cargo-zigbuild
+    - name: Set Perl environment variables
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        echo "PERL=$((where.exe perl)[0])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+        echo "OPENSSL_SRC_PERL=$((where.exe perl)[0])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
     - name: Build (Unix)
       if: ${{ runner.os != 'Windows' }}
       working-directory: ${{ inputs.working-directory }}
@@ -163,7 +169,7 @@ runs:
     - name: Build (Windows)
       if: ${{ runner.os == 'Windows' }}
       working-directory: ${{ inputs.working-directory }}
-      shell: pwsh
+      shell: bash
       run: |
         cargo +${{ steps.toolchain.outputs.name }} build --release --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact
