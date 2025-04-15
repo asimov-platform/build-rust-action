@@ -152,13 +152,20 @@ runs:
       if: ${{ inputs.use-zigbuild == 'true' }}
       shell: bash
       run: cargo install --locked cargo-zigbuild
-    - name: Build
+    - name: Build (Unix)
+      if: ${{ runner.os != 'Windows' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || 'build' }}"
         export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
         cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --release --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
+    - name: Build (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      working-directory: ${{ inputs.working-directory }}
+      shell: pwsh
+      run: |
+        cargo +${{ steps.toolchain.outputs.name }} build --release --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact
       working-directory: ${{ inputs.working-directory }}
       shell: bash
