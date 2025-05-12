@@ -186,7 +186,7 @@ runs:
       shell: pwsh
       run: |
         mkdir ${{ steps.globals.outputs.output_dir }}
-        Move-Item -Path ${{ steps.globals.outputs.target_dir }}/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }}.exe -Destination ${{ steps.globals.outputs.output_artifact_path_ext }}
+        Move-Item -Path ${{ steps.globals.outputs.target_dir }}/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} -Destination ${{ steps.globals.outputs.output_artifact_path_ext }}
     - name: Strip artifact
       if: ${{ inputs.strip-artifact == 'true' }}
       working-directory: ${{ inputs.working-directory }}
