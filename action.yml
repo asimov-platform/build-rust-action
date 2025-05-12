@@ -5,6 +5,10 @@ inputs:
   target:
     description: "Target to build for."
     required: true
+  profile:
+    description: "Profile to build with. Defaults to release."
+    required: false
+    default: "release"
   glibc-version:
     description: "Version of GLIBC to link to. Only works on Linux and using zigbuild. Defaults to system default."
     required: false
@@ -61,6 +65,9 @@ inputs:
     required: false
     default: "true"
 outputs:
+  build-path:
+    description: "Path to the built executable (not the final artifact)."
+    value: ${{ steps.finalize.outputs.build-path }}
   artifact-path:
     description: "Path to an Artifact."
     value: ${{ steps.finalize.outputs.artifact-path }}
@@ -120,6 +127,7 @@ runs:
         OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
         OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
         TARGET_DIR=$(cargo metadata --format-version 1 --no-deps | jq -r '.target_directory')
+        BUILD_PATH="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}/${BINARY_NAME}"
         echo "target_with_glibc=$TARGET_WITH_GLIBC" >> $GITHUB_OUTPUT
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
         echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
@@ -131,6 +139,7 @@ runs:
         echo "output_artifact_path=$OUTPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
         echo "target_dir=$TARGET_DIR" >> $GITHUB_OUTPUT
+        echo "build_path=$BUILD_PATH" >> $GITHUB_OUTPUT
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
@@ -165,28 +174,27 @@ runs:
       run: |
         BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || 'build' }}"
         export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
-        cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --release --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
+        cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --profile ${{ inputs.profile }} --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
     - name: Build (Windows)
       if: ${{ runner.os == 'Windows' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        cargo +${{ steps.toolchain.outputs.name }} build --release --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
+        cargo +${{ steps.toolchain.outputs.name }} build --profile ${{ inputs.profile }} --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
     - name: Move artifact (Unix)
       if: ${{ runner.os != 'Windows' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         mkdir ${{ steps.globals.outputs.output_dir }}
-        mv ${{ steps.globals.outputs.target_dir }}/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} \
-          ${{ steps.globals.outputs.output_artifact_path_ext }}
+        cp ${{ steps.globals.outputs.build_path }} ${{ steps.globals.outputs.output_artifact_path_ext }}
     - name: Move artifact (Windows)
       if: ${{ runner.os == 'Windows' }}
       working-directory: ${{ inputs.working-directory }}
       shell: pwsh
       run: |
         mkdir ${{ steps.globals.outputs.output_dir }}
-        Move-Item -Path ${{ steps.globals.outputs.target_dir }}/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} -Destination ${{ steps.globals.outputs.output_artifact_path_ext }}
+        Copy-Item -Path ${{ steps.globals.outputs.build_path }} -Destination ${{ steps.globals.outputs.output_artifact_path_ext }}
     - name: Strip artifact
       if: ${{ inputs.strip-artifact == 'true' }}
       working-directory: ${{ inputs.working-directory }}
@@ -228,6 +236,7 @@ runs:
       id: finalize
       shell: bash
       run: |
+        echo "build-path=${{ inputs.working-directory }}/${{ steps.globals.outputs.build_path }}" >> $GITHUB_OUTPUT
         if [ "${{ inputs.compress-artifact }}" == "true" ]; then
           echo "artifact-path=${{ steps.compress.outputs.output-path }}" >> $GITHUB_OUTPUT
         else
