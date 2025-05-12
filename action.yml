@@ -65,9 +65,12 @@ inputs:
     required: false
     default: "true"
 outputs:
+  build-dir:
+    description: "Path to the build directory (target directory)."
+    value: ${{ steps.globals.outputs.build_dir }}
   build-path:
     description: "Path to the built executable (not the final artifact)."
-    value: ${{ steps.finalize.outputs.build-path }}
+    value: ${{ steps.globals.outputs.build_path }}
   artifact-path:
     description: "Path to an Artifact."
     value: ${{ steps.finalize.outputs.artifact-path }}
@@ -127,7 +130,8 @@ runs:
         OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
         OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
         TARGET_DIR=$(cargo metadata --format-version 1 --no-deps | jq -r '.target_directory')
-        BUILD_PATH="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}/${BINARY_NAME}"
+        BUILD_DIR="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}"
+        BUILD_PATH="${BUILD_DIR}/${BINARY_NAME}"
         echo "target_with_glibc=$TARGET_WITH_GLIBC" >> $GITHUB_OUTPUT
         echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
         echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
@@ -139,6 +143,7 @@ runs:
         echo "output_artifact_path=$OUTPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
         echo "target_dir=$TARGET_DIR" >> $GITHUB_OUTPUT
+        echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
         echo "build_path=$BUILD_PATH" >> $GITHUB_OUTPUT
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
@@ -236,7 +241,6 @@ runs:
       id: finalize
       shell: bash
       run: |
-        echo "build-path=${{ inputs.working-directory }}/${{ steps.globals.outputs.build_path }}" >> $GITHUB_OUTPUT
         if [ "${{ inputs.compress-artifact }}" == "true" ]; then
           echo "artifact-path=${{ steps.compress.outputs.output-path }}" >> $GITHUB_OUTPUT
         else
