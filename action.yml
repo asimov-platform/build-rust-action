@@ -172,13 +172,21 @@ runs:
       shell: bash
       run: |
         cargo +${{ steps.toolchain.outputs.name }} build --release --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
-    - name: Move artifact
+    - name: Move artifact (Unix)
+      if: ${{ runner.os != 'Windows' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         mkdir ${{ steps.globals.outputs.output_dir }}
         mv ${{ steps.globals.outputs.target_dir }}/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }} \
           ${{ steps.globals.outputs.output_artifact_path_ext }}
+    - name: Move artifact (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      working-directory: ${{ inputs.working-directory }}
+      shell: pwsh
+      run: |
+        mkdir ${{ steps.globals.outputs.output_dir }}
+        Move-Item -Path ${{ steps.globals.outputs.target_dir }}/${{ inputs.target }}/release/${{ steps.globals.outputs.binary_name }}.exe -Destination ${{ steps.globals.outputs.output_artifact_path_ext }}
     - name: Strip artifact
       if: ${{ inputs.strip-artifact == 'true' }}
       working-directory: ${{ inputs.working-directory }}
