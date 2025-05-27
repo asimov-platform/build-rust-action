@@ -166,9 +166,9 @@ runs:
       shell: bash
       run: |
         BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || 'build' }}"
-        PACKAGES_TO_BUILD=("${{ steps.globals.outputs.packages_to_build }}")
+        PACKAGES_TO_BUILD=(${{ steps.globals.outputs.packages_to_build }})
         PACKAGE_ARG="${PACKAGES_TO_BUILD[@]/#/--package }"
-        TARGETS_TO_BUILD=("${{ steps.globals.outputs.targets_to_build }}")
+        TARGETS_TO_BUILD=(${{ steps.globals.outputs.targets_to_build }})
         TARGET_ARG="${TARGETS_TO_BUILD[@]/#/--bin }"
         export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
         cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --profile ${{ inputs.profile }} $PACKAGE_ARG $TARGET_ARG --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
@@ -179,7 +179,7 @@ runs:
       run: |
         mkdir ${{ steps.globals.outputs.output_dir }}
 
-        TARGETS_TO_BUILD=("${{ steps.globals.outputs.targets_to_build }}")
+        TARGETS_TO_BUILD=(${{ steps.globals.outputs.targets_to_build }})
         EXT="${{ inputs.binary-extension }}"
         PREFIX="${{ inputs.artifact-prefix }}"
         SUFFIX="${{ inputs.artifact-suffix != '' && inputs.artifact-suffix || inputs.target }}"
