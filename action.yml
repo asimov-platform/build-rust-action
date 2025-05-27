@@ -12,21 +12,23 @@ inputs:
   glibc-version:
     description: "Version of GLIBC to link to. Only works on Linux and using zigbuild. Defaults to system default."
     required: false
-    default: ""
-  artifact-name:
-    description: "Name of the output artifact. Must be unique. Prefixed with artifact-prefix."
-    required: true
   artifact-prefix:
-    description: "Prefix for the output artifact name. Defaults to package name."
+    description: "Prefix for the output artifact name. Defaults to empty string."
     required: false
-  package-name:
-    description: "Name of the package. Default is parsed from Cargo.toml."
+  artifact-suffix:
+    description: "Suffix for the output artifact name. Defaults to target."
     required: false
-  binary-name:
-    description: "Name of the output binary file. Defaults to package name with extension."
+  artifact-name:
+    description: "Name of the output artifact. Must be unique. Prepended with artifact-prefix and appended with artifact-suffix. Defaults to binary being built."
+    required: false
+  packages-to-build:
+    description: "Name of the packages to build, separated by space. Defaults to workspace's default-members that have at least one binary target."
+    required: false
+  targets-to-build:
+    description: "Name of the targets to build. Defaults to all binary targets in the packages-to-build."
     required: false
   binary-extension:
-    description: "Extension for the output binary file. Defaults to empty string."
+    description: "Extension for the output binary file. Defaults to 'exe' for Windows targets and empty on other platforms."
     required: false
   working-directory:
     description: "Working directory. Defaults to root."
@@ -41,7 +43,7 @@ inputs:
     required: false
     default: "stable"
   install-macos-sdk:
-    description: "Install MacOS SDK? Defaults to false."
+    description: "Install MacOS SDK? Only works with zigbuild. Defaults to false."
     required: false
     default: "false"
   use-zigbuild:
@@ -65,21 +67,18 @@ inputs:
     required: false
     default: "true"
 outputs:
-  build-dir:
+  target-dir:
     description: "Path to the build directory (target directory)."
     value: ${{ steps.globals.outputs.build_dir }}
-  build-path:
-    description: "Path to the built executable (not the final artifact)."
-    value: ${{ steps.globals.outputs.build_path }}
-  artifact-path:
-    description: "Path to an Artifact."
-    value: ${{ steps.finalize.outputs.artifact-path }}
-  artifact-id:
-    description: "GitHub ID of an Artifact, can be used by the REST API."
-    value: ${{ steps.upload.outputs.artifact-id }}
-  artifact-url:
-    description: "URL to download an Artifact."
-    value: ${{ steps.upload.outputs.artifact-url }}
+  # artifact-path:
+  #   description: "Path to an Artifact."
+  #   value: ${{ steps.finalize.outputs.artifact-path }}
+  # artifact-id:
+  #   description: "GitHub ID of an Artifact, can be used by the REST API."
+  #   value: ${{ steps.upload.outputs.artifact-id }}
+  # artifact-url:
+  #   description: "URL to download an Artifact."
+  #   value: ${{ steps.upload.outputs.artifact-url }}
 runs:
   using: "composite"
   steps:
@@ -94,57 +93,42 @@ runs:
       uses: actions/checkout@v4
       with:
         path: ${{ inputs.working-directory }}
-    - name: Obtain package name
-      id: jq
-      if: ${{ inputs.package-name == '' }}
-      working-directory: ${{ inputs.working-directory }}
-      shell: bash
-      run: |
-        METADATA=$(cargo metadata --format-version 1 --no-deps)
-        VALID_TARGETS=$(echo "$METADATA" | jq -r '. as $root | .packages[] | select(.id | IN($root.workspace_default_members[])) | select(.targets[].kind[] | contains("bin")) | .name')
-        VALID_TARGETS_COUNT=$(echo "$VALID_TARGETS" | wc -l)
-        if [ "$VALID_TARGETS_COUNT" -eq 0 ]; then
-          echo "::error::No valid targets found. Please specify package-name input."
-          exit 1
-        elif [ "$VALID_TARGETS_COUNT" -gt 1 ]; then
-          echo "::error::Multiple valid targets found. Please specify package-name input."
-          exit 1
-        fi
-        PACKAGE_NAME=$(echo "$VALID_TARGETS" | head -n 1)
-        echo "result=$PACKAGE_NAME" >> $GITHUB_OUTPUT
     - name: Prepare environment
       id: globals
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        EXT="${{ inputs.binary-extension != '' && '.' || '' }}${{ inputs.binary-extension }}"
+        METADATA=$(cargo metadata --format-version 1 --no-deps)
+
+        if [[ -z "${{ inputs.packages-to-build }}" ]]; then
+          PACKAGES_TO_BUILD=$(echo "$METADATA" | jq -r '. as $root | [.packages[] | select(.id | IN($root.workspace_default_members[])) | select(any(.targets[]; .kind[] | contains("bin"))) | .name] | join(" ")')
+          if [[ -z "$PACKAGES_TO_BUILD" ]]; then
+            echo "::error::No valid packages found. Please specify packages-to-build input."
+            exit 1
+          fi
+        elif
+          PACKAGES_TO_BUILD="${{ inputs.packages-to-build }}"
+        fi
+
         TARGET_WITH_GLIBC="${{ inputs.target }}${{ inputs.glibc-version != '' && '.' || '' }}${{ inputs.glibc-version }}"
-        PACKAGE_NAME="${{ inputs.package-name != '' && inputs.package-name || steps.jq.outputs.result }}"
-        BINARY_NAME="${{ inputs.binary-name != '' && inputs.binary-name || '$PACKAGE_NAME' }}$EXT"
-        ARTIFACT_PREFIX="${{ inputs.artifact-prefix != '' && inputs.artifact-prefix || '$PACKAGE_NAME' }}"
-        ARTIFACT_NAME="${ARTIFACT_PREFIX}-${{ inputs.artifact-name }}"
-        ARTIFACT_NAME_EXT="$ARTIFACT_NAME$EXT"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
         OUTPUT_DIR="output"
-        OUTPUT_BIINARY_PATH="${OUTPUT_DIR}/$BINARY_NAME"
-        OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
-        OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
-        TARGET_DIR=$(cargo metadata --format-version 1 --no-deps | jq -r '.target_directory')
+        # OUTPUT_BIINARY_PATH="${OUTPUT_DIR}/$BINARY_NAME"
+        # OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
+        # OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
+        TARGET_DIR=$(echo "$METADATA" | jq -r '.target_directory')
         BUILD_DIR="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}"
-        BUILD_PATH="${BUILD_DIR}/${BINARY_NAME}"
+        TARGETS_TO_BUILD=$(echo "$METADATA" | jq --arg packages_to_build "$PACKAGES_TO_BUILD" -r '. as $root | .packages[] | select(.name as $n | ($packages_to_build | split(" ") | index($n))) | [.targets[] | select(.kind[] | contains("bin")) | .name] | join(" ")')
         echo "target_with_glibc=$TARGET_WITH_GLIBC" >> $GITHUB_OUTPUT
-        echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
-        echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
-        echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
-        echo "artifact_name_ext=$ARTIFACT_NAME_EXT" >> $GITHUB_OUTPUT
         echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
         echo "output_dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
-        echo "output_binary_path=$OUTPUT_BIINARY_PATH" >> $GITHUB_OUTPUT
-        echo "output_artifact_path=$OUTPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
-        echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
+        # echo "output_binary_path=$OUTPUT_BIINARY_PATH" >> $GITHUB_OUTPUT
+        # echo "output_artifact_path=$OUTPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
+        # echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
         echo "target_dir=$TARGET_DIR" >> $GITHUB_OUTPUT
         echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
-        echo "build_path=$BUILD_PATH" >> $GITHUB_OUTPUT
+        echo "packages_to_build=$PACKAGES_TO_BUILD" >> $GITHUB_OUTPUT
+        echo "targets_to_build=$TARGETS_TO_BUILD" >> $GITHUB_OUTPUT
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
@@ -172,77 +156,93 @@ runs:
       run: |
         echo "PERL=$((where.exe perl)[0])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
         echo "OPENSSL_SRC_PERL=$((where.exe perl)[0])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-    - name: Build (Unix)
-      if: ${{ runner.os != 'Windows' }}
+    - name: Build
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || 'build' }}"
+        PACKAGES_TO_BUILD=("${{ steps.globals.outputs.packages_to_build }}")
+        PACKAGE_ARG="${PACKAGES_TO_BUILD[@]/#/--package }"
+        TARGETS_TO_BUILD=("${{ steps.globals.outputs.targets_to_build }}")
+        TARGET_ARG="${TARGETS_TO_BUILD[@]/#/--bin }"
         export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
-        cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --profile ${{ inputs.profile }} --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
-    - name: Build (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      working-directory: ${{ inputs.working-directory }}
+        cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --profile ${{ inputs.profile }} $PACKAGE_ARG $TARGET_ARG --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
+    - name: Move artifacts
+      id: move
       shell: bash
-      run: |
-        cargo +${{ steps.toolchain.outputs.name }} build --profile ${{ inputs.profile }} --package ${{ steps.globals.outputs.package_name }} --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
-    - name: Move artifact (Unix)
-      if: ${{ runner.os != 'Windows' }}
       working-directory: ${{ inputs.working-directory }}
-      shell: bash
       run: |
         mkdir ${{ steps.globals.outputs.output_dir }}
-        cp ${{ steps.globals.outputs.build_path }} ${{ steps.globals.outputs.output_artifact_path_ext }}
-    - name: Move artifact (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      working-directory: ${{ inputs.working-directory }}
-      shell: pwsh
-      run: |
-        mkdir ${{ steps.globals.outputs.output_dir }}
-        Copy-Item -Path ${{ steps.globals.outputs.build_path }} -Destination ${{ steps.globals.outputs.output_artifact_path_ext }}
+
+        TARGETS_TO_BUILD=("${{ steps.globals.outputs.targets_to_build }}")
+        EXT="${{ inputs.binary-extension }}"
+        PREFIX="${{ inputs.artifact-prefix }}"
+        SUFFIX="${{ inputs.artifact-suffix != '' && inputs.artifact-suffix || inputs.target }}"
+        EXT="${EXT:+.}${EXT}"
+        PREFIX="$PREFIX${PREFIX:+-}"
+        SUFFIX="${SUFFIX:+-}$SUFFIX"
+        TARGETS=()
+
+        for TARGET in $TARGETS_TO_BUILD; do
+          NAME="${{ inputs.artifact-name != '' && inputs.artifact-name || '$TARGET' }}"
+          RESULT="$PREFIX$NAME$SUFFIX$EXT"
+          echo "target result: $RESULT"
+
+          BUILD_PATH="${{ steps.globals.outputs.build_dir }}/$RESULT"
+          OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$RESULT"
+
+          TARGETS+=("$OUTPUT_PATH")
+
+          cp "$BUILD_PATH" "$OUTPUT_PATH"
+        done
+
+        echo "targets=${TARGETS[@]}" >> $GITHUB_OUTPUT
     - name: Strip artifact
       if: ${{ inputs.strip-artifact == 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: strip ${{ steps.globals.outputs.output_artifact_path_ext }}
-    - name: Compress or archive artifact
-      id: compress
-      if: ${{ inputs.compress-artifact == 'true' }}
-      shell: bash
       run: |
-        ARTIFACT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}"
-        INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_binary_path }}"
-        OUTPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path }}"
-
-        mv "$ARTIFACT_PATH" "$INPUT_PATH"
-
-        if [ "$RUNNER_OS" = "Windows" ]; then
-          OUTPUT_PATH="$OUTPUT_PATH.zip"
-          7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
-        elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
-          OUTPUT_PATH="$OUTPUT_PATH.zip"
-          zip -mj "$OUTPUT_PATH" "$INPUT_PATH"
-        else
-          OUTPUT_PATH="$OUTPUT_PATH.gz"
-          gzip -f "$INPUT_PATH"
-          mv "$INPUT_PATH.gz" "$OUTPUT_PATH"
-        fi
-
-        echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
+        for TARGET in ${{ steps.move.outputs.targets }}; do
+          strip "$TARGET"
+        done
+    # - name: Compress or archive artifact
+    #   id: compress
+    #   if: ${{ inputs.compress-artifact == 'true' }}
+    #   shell: bash
+    #   run: |
+    #     ARTIFACT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}"
+    #     INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_binary_path }}"
+    #     OUTPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path }}"
+    #
+    #     mv "$ARTIFACT_PATH" "$INPUT_PATH"
+    #
+    #     if [ "$RUNNER_OS" = "Windows" ]; then
+    #       OUTPUT_PATH="$OUTPUT_PATH.zip"
+    #       7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
+    #     elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
+    #       OUTPUT_PATH="$OUTPUT_PATH.zip"
+    #       zip -mj "$OUTPUT_PATH" "$INPUT_PATH"
+    #     else
+    #       OUTPUT_PATH="$OUTPUT_PATH.gz"
+    #       gzip -f "$INPUT_PATH"
+    #       mv "$INPUT_PATH.gz" "$OUTPUT_PATH"
+    #     fi
+    #
+    #     echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
     - name: Upload artifact
       id: upload
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.artifact-name }}
+        name: ${{ inputs.target }}
         path: ${{ inputs.working-directory }}/${{ steps.globals.outputs.output_dir }}/*
         if-no-files-found: error
-    - name: Write outputs
-      id: finalize
-      shell: bash
-      run: |
-        if [ "${{ inputs.compress-artifact }}" == "true" ]; then
-          echo "artifact-path=${{ steps.compress.outputs.output-path }}" >> $GITHUB_OUTPUT
-        else
-          echo "artifact-path=${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}" >> $GITHUB_OUTPUT
-        fi
+    # - name: Write outputs
+    #   id: finalize
+    #   shell: bash
+    #   run: |
+    #     if [ "${{ inputs.compress-artifact }}" == "true" ]; then
+    #       echo "artifact-path=${{ steps.compress.outputs.output-path }}" >> $GITHUB_OUTPUT
+    #     else
+    #       echo "artifact-path=${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}" >> $GITHUB_OUTPUT
+    #     fi
