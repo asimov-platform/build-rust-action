@@ -184,7 +184,7 @@ runs:
         SUFFIX="${SUFFIX:+-}$SUFFIX"
         TARGETS=()
 
-        for TARGET in $TARGETS_TO_BUILD; do
+        for TARGET in "${TARGETS_TO_BUILD[@]}"; do
           NAME="${{ inputs.artifact-name != '' && inputs.artifact-name || '$TARGET' }}"
           RESULT="$PREFIX$NAME$SUFFIX$EXT"
           echo "target result: $RESULT"
