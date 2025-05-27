@@ -193,7 +193,7 @@ runs:
           RESULT="$PREFIX$NAME$SUFFIX$EXT"
           echo "target result: $RESULT"
 
-          BUILD_PATH="${{ steps.globals.outputs.build_dir }}/$RESULT"
+          BUILD_PATH="${{ steps.globals.outputs.build_dir }}/$TARGET$EXT"
           OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$RESULT"
 
           TARGETS+=("$OUTPUT_PATH")
