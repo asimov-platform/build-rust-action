@@ -106,7 +106,7 @@ runs:
             echo "::error::No valid packages found. Please specify packages-to-build input."
             exit 1
           fi
-        elif
+        else
           PACKAGES_TO_BUILD="${{ inputs.packages-to-build }}"
         fi
 
