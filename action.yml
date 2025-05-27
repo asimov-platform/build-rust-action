@@ -118,7 +118,7 @@ runs:
         # OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
         TARGET_DIR=$(echo "$METADATA" | jq -r '.target_directory')
         BUILD_DIR="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}"
-        TARGETS_TO_BUILD=$(echo "$METADATA" | jq --arg packages_to_build "$PACKAGES_TO_BUILD" -r '. as $root | .packages[] | select(.name as $n | ($packages_to_build | split(" ") | index($n))) | [.targets[] | select(.kind[] | contains("bin")) | .name] | join(" ")')
+        TARGETS_TO_BUILD=$(echo "$METADATA" | jq --arg packages_to_build "$PACKAGES_TO_BUILD" -r '. as $root | [.packages[] | select(.name as $n | ($packages_to_build | split(" ") | index($n))) | .targets[] | select(.kind[] | contains("bin")) | .name] | join(" ")')
 
         echo "target_with_glibc=$TARGET_WITH_GLIBC" >> $GITHUB_OUTPUT
         echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
@@ -128,12 +128,8 @@ runs:
         # echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
         echo "target_dir=$TARGET_DIR" >> $GITHUB_OUTPUT
         echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
-        echo 'packages_to_build<<;' >> $GITHUB_OUTPUT
-        echo "$PACKAGES_TO_BUILD" >> $GITHUB_OUTPUT
-        echo ';' >> $GITHUB_OUTPUT
-        echo 'targets_to_build<<;' >> $GITHUB_OUTPUT
-        echo "$TARGETS_TO_BUILD" >> $GITHUB_OUTPUT
-        echo ';' >> $GITHUB_OUTPUT
+        echo "packages_to_build=$PACKAGES_TO_BUILD" >> $GITHUB_OUTPUT
+        echo "targets_to_build=$TARGETS_TO_BUILD" >> $GITHUB_OUTPUT
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
