@@ -113,23 +113,19 @@ runs:
         TARGET_WITH_GLIBC="${{ inputs.target }}${{ inputs.glibc-version != '' && '.' || '' }}${{ inputs.glibc-version }}"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
         OUTPUT_DIR="output"
-        # OUTPUT_BIINARY_PATH="${OUTPUT_DIR}/$BINARY_NAME"
-        # OUTPUT_ARTIFACT_PATH="${OUTPUT_DIR}/$ARTIFACT_NAME"
-        # OUTPUT_ARTIFACT_PATH_EXT="${OUTPUT_DIR}/$ARTIFACT_NAME_EXT"
         TARGET_DIR=$(echo "$METADATA" | jq -r '.target_directory')
         BUILD_DIR="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}"
         TARGETS_TO_BUILD=$(echo "$METADATA" | jq --arg packages_to_build "$PACKAGES_TO_BUILD" -r '. as $root | [.packages[] | select(.name as $n | ($packages_to_build | split(" ") | index($n))) | .targets[] | select(.kind[] | contains("bin")) | .name] | join(" ")')
+        PACKAGES_MAP=$(echo "$METADATA" | jq -r '[.packages[] | select([.targets[] | select(.kind[] | contains("bin"))] | length > 0) | "\(.name)=\([.targets[] | select(.kind[] | contains("bin")) | .name] | join(","))"] | join(" ")')
 
         echo "target_with_glibc=$TARGET_WITH_GLIBC" >> $GITHUB_OUTPUT
         echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
         echo "output_dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
-        # echo "output_binary_path=$OUTPUT_BIINARY_PATH" >> $GITHUB_OUTPUT
-        # echo "output_artifact_path=$OUTPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
-        # echo "output_artifact_path_ext=$OUTPUT_ARTIFACT_PATH_EXT" >> $GITHUB_OUTPUT
         echo "target_dir=$TARGET_DIR" >> $GITHUB_OUTPUT
         echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
         echo "packages_to_build=$PACKAGES_TO_BUILD" >> $GITHUB_OUTPUT
         echo "targets_to_build=$TARGETS_TO_BUILD" >> $GITHUB_OUTPUT
+        echo "packages_map=$PACKAGES_MAP" >> $GITHUB_OUTPUT
     - name: Install MinGW
       if: ${{ runner.os != 'windows' && inputs.target == 'x86_64-pc-windows-gnu' }}
       shell: bash
@@ -198,38 +194,48 @@ runs:
         done
 
         echo "targets=${TARGETS[@]}" >> $GITHUB_OUTPUT
-    - name: Strip artifact
+    - name: Strip artifacts
       if: ${{ inputs.strip-artifact == 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        for TARGET in ${{ steps.move.outputs.targets }}; do
+        TARGETS=(${{ steps.move.outputs.targets }})
+
+        for TARGET in "${TARGETS[@]}"; do
           strip "$TARGET"
         done
-    # - name: Compress or archive artifact
-    #   id: compress
-    #   if: ${{ inputs.compress-artifact == 'true' }}
-    #   shell: bash
-    #   run: |
-    #     ARTIFACT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}"
-    #     INPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_binary_path }}"
-    #     OUTPUT_PATH="${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path }}"
-    #
-    #     mv "$ARTIFACT_PATH" "$INPUT_PATH"
-    #
-    #     if [ "$RUNNER_OS" = "Windows" ]; then
-    #       OUTPUT_PATH="$OUTPUT_PATH.zip"
-    #       7z a -tzip -sdel "$OUTPUT_PATH" "$INPUT_PATH"
-    #     elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
-    #       OUTPUT_PATH="$OUTPUT_PATH.zip"
-    #       zip -mj "$OUTPUT_PATH" "$INPUT_PATH"
-    #     else
-    #       OUTPUT_PATH="$OUTPUT_PATH.gz"
-    #       gzip -f "$INPUT_PATH"
-    #       mv "$INPUT_PATH.gz" "$OUTPUT_PATH"
-    #     fi
-    #
-    #     echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
+    - name: Compress or archive artifacts
+      id: compress
+      if: ${{ inputs.compress-artifact == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        PACKAGES=(${{ steps.globals.outputs.packages_to_build }})
+        PACKAGES_MAP=(${{ steps.globals.outputs.packages_map }})
+        OUTPUT=()
+
+        for PACKAGE_ENTRY in "${PACKAGES_MAP[@]}"; do
+          PACKAGE_NAME="${PACKAGE_ENTRY%%=*}" # remove everything after the first '='
+          PACKAGE_TARGETS="${PACKAGE_ENTRY#*=}" # remove everything before the first '='
+          FILES="${PACKAGE_TARGETS//,/ }" # convert from comma-separated to space-separated
+
+          OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/${PACKAGE_NAME}"
+          
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            OUTPUT_PATH="$OUTPUT_PATH.zip"
+            7z a -tzip -sdel "$OUTPUT_PATH" $FILES
+          elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
+            OUTPUT_PATH="$OUTPUT_PATH.zip"
+            zip -mj "$OUTPUT_PATH" $FILES
+          else
+            OUTPUT_PATH="$OUTPUT_PATH.gz"
+            tar -czf "$OUTPUT_PATH" --remove-files $FILES
+          fi
+
+          OUTPUT+=("$OUTPUT_PATH")
+        done
+
+        echo "output-path=${OUTPUT[@]}" >> $GITHUB_OUTPUT
     - name: Upload artifact
       id: upload
       if: ${{ inputs.upload-artifact == 'true' }}
