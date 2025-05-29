@@ -215,7 +215,7 @@ runs:
               OUTPUT_PATH="$OUTPUT_PATH.zip"
               zip -mj "$OUTPUT_PATH" ${FILES[@]}
             else
-              OUTPUT_PATH="$OUTPUT_PATH.gz"
+              OUTPUT_PATH="$OUTPUT_PATH.tar.gz"
               tar -czf "$OUTPUT_PATH" --remove-files ${FILES[@]}
             fi
 
