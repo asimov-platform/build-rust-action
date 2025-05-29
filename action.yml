@@ -206,6 +206,8 @@ runs:
           done
 
           if [ "${{ inputs.compress-artifact }}" = "true" ]; then
+            OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$PACKAGE_NAME"
+
             if [ "$RUNNER_OS" = "Windows" ]; then
               OUTPUT_PATH="$OUTPUT_PATH.zip"
               7z a -tzip -sdel "$OUTPUT_PATH" ${FILES[@]}
