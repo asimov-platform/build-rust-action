@@ -164,78 +164,68 @@ runs:
         TARGET_ARG="${TARGETS_TO_BUILD[@]/#/--bin }"
         export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
         cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --profile ${{ inputs.profile }} $PACKAGE_ARG $TARGET_ARG --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
-    - name: Move artifacts
+    - name: Process binaries
       id: move
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
         mkdir ${{ steps.globals.outputs.output_dir }}
 
-        TARGETS_TO_BUILD=(${{ steps.globals.outputs.targets_to_build }})
+        PACKAGES_MAP=(${{ steps.globals.outputs.packages_map }})
+
         EXT="${{ inputs.binary-extension }}"
         PREFIX="${{ inputs.artifact-prefix }}"
         SUFFIX="${{ inputs.artifact-suffix != '' && inputs.artifact-suffix || inputs.target }}"
         EXT="${EXT:+.}${EXT}"
         PREFIX="$PREFIX${PREFIX:+-}"
         SUFFIX="${SUFFIX:+-}$SUFFIX"
-        TARGETS=()
-
-        for TARGET in "${TARGETS_TO_BUILD[@]}"; do
-          NAME="${{ inputs.artifact-name != '' && inputs.artifact-name || '$TARGET' }}"
-          RESULT="$PREFIX$NAME$SUFFIX$EXT"
-          echo "target result: $RESULT"
-
-          BUILD_PATH="${{ steps.globals.outputs.build_dir }}/$TARGET$EXT"
-          OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$RESULT"
-
-          TARGETS+=("$OUTPUT_PATH")
-
-          cp "$BUILD_PATH" "$OUTPUT_PATH"
-        done
-
-        echo "targets=${TARGETS[@]}" >> $GITHUB_OUTPUT
-    - name: Strip artifacts
-      if: ${{ inputs.strip-artifact == 'true' }}
-      working-directory: ${{ inputs.working-directory }}
-      shell: bash
-      run: |
-        TARGETS=(${{ steps.move.outputs.targets }})
-
-        for TARGET in "${TARGETS[@]}"; do
-          strip "$TARGET"
-        done
-    - name: Compress or archive artifacts
-      id: compress
-      if: ${{ inputs.compress-artifact == 'true' }}
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      run: |
-        PACKAGES=(${{ steps.globals.outputs.packages_to_build }})
-        PACKAGES_MAP=(${{ steps.globals.outputs.packages_map }})
         OUTPUT=()
 
         for PACKAGE_ENTRY in "${PACKAGES_MAP[@]}"; do
           PACKAGE_NAME="${PACKAGE_ENTRY%%=*}" # remove everything after the first '='
           PACKAGE_TARGETS="${PACKAGE_ENTRY#*=}" # remove everything before the first '='
-          FILES="${PACKAGE_TARGETS//,/ }" # convert from comma-separated to space-separated
+          TARGETS="${PACKAGE_TARGETS//,/ }" # convert from comma-separated to space-separated
+          FILES=()
 
-          OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/${PACKAGE_NAME}"
-          
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            OUTPUT_PATH="$OUTPUT_PATH.zip"
-            7z a -tzip -sdel "$OUTPUT_PATH" $FILES
-          elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
-            OUTPUT_PATH="$OUTPUT_PATH.zip"
-            zip -mj "$OUTPUT_PATH" $FILES
+          for TARGET in $TARGETS; do
+            NAME="${{ inputs.artifact-name != '' && inputs.artifact-name || '$TARGET' }}"
+            RESULT="$PREFIX$NAME$SUFFIX$EXT"
+
+            BUILD_PATH="${{ steps.globals.outputs.build_dir }}/$TARGET$EXT"
+            OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$RESULT"
+
+            # Copy file to output directory
+            cp "$BUILD_PATH" "$OUTPUT_PATH"
+
+            # Strip file if needed
+            if [ "${{ inputs.strip-artifact }}" = "true" ]; then
+              strip "$OUTPUT_PATH"
+            fi
+
+            FILES+=("$OUTPUT_PATH")
+          done
+
+          if [ "${{ inputs.compress-artifact }}" = "true" ]; then
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              OUTPUT_PATH="$OUTPUT_PATH.zip"
+              7z a -tzip -sdel "$OUTPUT_PATH" ${FILES[@]}
+            elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
+              OUTPUT_PATH="$OUTPUT_PATH.zip"
+              zip -mj "$OUTPUT_PATH" ${FILES[@]}
+            else
+              OUTPUT_PATH="$OUTPUT_PATH.gz"
+              tar -czf "$OUTPUT_PATH" --remove-files ${FILES[@]}
+            fi
+
+            # Append final archive path to the output array
+            OUTPUT+=("$OUTPUT_PATH")
           else
-            OUTPUT_PATH="$OUTPUT_PATH.gz"
-            tar -czf "$OUTPUT_PATH" --remove-files $FILES
+            # Append all files to the output array
+            OUTPUT+=("${FILES[@]}")
           fi
-
-          OUTPUT+=("$OUTPUT_PATH")
         done
 
-        echo "output-path=${OUTPUT[@]}" >> $GITHUB_OUTPUT
+        echo "output=${OUTPUT[@]}" >> $GITHUB_OUTPUT
     - name: Upload artifact
       id: upload
       if: ${{ inputs.upload-artifact == 'true' }}
