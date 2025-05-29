@@ -70,15 +70,18 @@ outputs:
   target-dir:
     description: "Path to the build directory (target directory)."
     value: ${{ steps.globals.outputs.build_dir }}
-  # artifact-path:
-  #   description: "Path to an Artifact."
-  #   value: ${{ steps.finalize.outputs.artifact-path }}
-  # artifact-id:
-  #   description: "GitHub ID of an Artifact, can be used by the REST API."
-  #   value: ${{ steps.upload.outputs.artifact-id }}
-  # artifact-url:
-  #   description: "URL to download an Artifact."
-  #   value: ${{ steps.upload.outputs.artifact-url }}
+  output-dir:
+    description: "Path to the output directory (relative to the working directory)."
+    value: ${{ steps.globals.outputs.output_dir }}
+  output-paths:
+    description: "Paths to the output files separated by space (relative to the working directory)."
+    value: ${{ steps.process.outputs.output }}
+  artifact-id:
+    description: "GitHub ID of an Artifact, can be used by the REST API."
+    value: ${{ steps.upload.outputs.artifact-id }}
+  artifact-url:
+    description: "URL to download an Artifact."
+    value: ${{ steps.upload.outputs.artifact-url }}
 runs:
   using: "composite"
   steps:
@@ -165,7 +168,7 @@ runs:
         export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
         cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --profile ${{ inputs.profile }} $PACKAGE_ARG $TARGET_ARG --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
     - name: Process binaries
-      id: move
+      id: process
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -242,12 +245,3 @@ runs:
         name: ${{ inputs.artifact-prefix }}${{ inputs.target }}${{ inputs.artifact-suffix }}
         path: ${{ inputs.working-directory }}/${{ steps.globals.outputs.output_dir }}/*
         if-no-files-found: error
-    # - name: Write outputs
-    #   id: finalize
-    #   shell: bash
-    #   run: |
-    #     if [ "${{ inputs.compress-artifact }}" == "true" ]; then
-    #       echo "artifact-path=${{ steps.compress.outputs.output-path }}" >> $GITHUB_OUTPUT
-    #     else
-    #       echo "artifact-path=${{ inputs.working-directory }}/${{ steps.globals.outputs.output_artifact_path_ext }}" >> $GITHUB_OUTPUT
-    #     fi
