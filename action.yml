@@ -189,7 +189,12 @@ runs:
 
           for TARGET in $TARGETS; do
             NAME="${{ inputs.artifact-name != '' && inputs.artifact-name || '$TARGET' }}"
-            RESULT="$PREFIX$NAME$SUFFIX$EXT"
+
+            if [ "${{ inputs.compress-artifact }}" = "true" ]; then
+              RESULT="$NAME$EXT"
+            else
+              RESULT="$PREFIX$NAME$SUFFIX$EXT"
+            fi
 
             BUILD_PATH="${{ steps.globals.outputs.build_dir }}/$TARGET$EXT"
             OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$RESULT"
@@ -206,7 +211,7 @@ runs:
           done
 
           if [ "${{ inputs.compress-artifact }}" = "true" ]; then
-            OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$PACKAGE_NAME"
+            OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$PREFIX$PACKAGE_NAME$SUFFIX"
 
             if [ "$RUNNER_OS" = "Windows" ]; then
               OUTPUT_PATH="$OUTPUT_PATH.zip"
