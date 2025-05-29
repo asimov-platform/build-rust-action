@@ -115,8 +115,8 @@ runs:
         OUTPUT_DIR="output"
         TARGET_DIR=$(echo "$METADATA" | jq -r '.target_directory')
         BUILD_DIR="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}"
-        TARGETS_TO_BUILD=$(echo "$METADATA" | jq --arg packages_to_build "$PACKAGES_TO_BUILD" -r '. as $root | [.packages[] | select(.name as $n | ($packages_to_build | split(" ") | index($n))) | .targets[] | select(.kind[] | contains("bin")) | .name] | join(" ")')
-        PACKAGES_MAP=$(echo "$METADATA" | jq -r '[.packages[] | select([.targets[] | select(.kind[] | contains("bin"))] | length > 0) | "\(.name)=\([.targets[] | select(.kind[] | contains("bin")) | .name] | join(","))"] | join(" ")')
+        TARGETS_TO_BUILD=$(echo "$METADATA" | jq --arg packages_to_build "$PACKAGES_TO_BUILD" -r '[.packages[] | select(.name as $n | ($packages_to_build | split(" ") | index($n))) | .targets[] | select(.kind[] | contains("bin")) | .name] | join(" ")')
+        PACKAGES_MAP=$(echo "$METADATA" | jq --arg packages_to_build "$PACKAGES_TO_BUILD" -r '[.packages[] | select(.name as $n | ($packages_to_build | split(" ") | index($n))) | select([.targets[] | select(.kind[] | contains("bin"))] | length > 0) | "\(.name)=\([.targets[] | select(.kind[] | contains("bin")) | .name] | join(","))"] | join(" ")')
 
         echo "target_with_glibc=$TARGET_WITH_GLIBC" >> $GITHUB_OUTPUT
         echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
