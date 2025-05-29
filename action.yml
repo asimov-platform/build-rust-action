@@ -221,7 +221,8 @@ runs:
               zip -mj "$OUTPUT_PATH" ${FILES[@]}
             else
               OUTPUT_PATH="$OUTPUT_PATH.tar.gz"
-              tar -czf "$OUTPUT_PATH" --transform 's|.*/||' --remove-files ${FILES[@]}
+              tar_bin=${{ runner.os == 'macOS' && 'gtar' || 'tar' }}
+              $tar_bin -czf "$OUTPUT_PATH" --transform 's|.*/||' --remove-files ${FILES[@]}
             fi
 
             # Append final archive path to the output array
