@@ -196,7 +196,7 @@ runs:
               RESULT="$PREFIX$NAME$SUFFIX$EXT"
             fi
 
-            BUILD_PATH="./${{ steps.globals.outputs.build_dir }}/$TARGET$EXT"
+            BUILD_PATH="${{ steps.globals.outputs.build_dir }}/$TARGET$EXT"
             OUTPUT_PATH="./${{ steps.globals.outputs.output_dir }}/$RESULT"
 
             # Copy file to output directory
