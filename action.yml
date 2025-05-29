@@ -28,7 +28,7 @@ inputs:
     description: "Name of the targets to build. Defaults to all binary targets in the packages-to-build."
     required: false
   binary-extension:
-    description: "Extension for the output binary file. Defaults to 'exe' for Windows targets and empty on other platforms."
+    description: "Extension for the output binary file. Defaults to empty string."
     required: false
   working-directory:
     description: "Working directory. Defaults to root."
