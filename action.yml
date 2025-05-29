@@ -112,7 +112,7 @@ runs:
 
         TARGET_WITH_GLIBC="${{ inputs.target }}${{ inputs.glibc-version != '' && '.' || '' }}${{ inputs.glibc-version }}"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
-        OUTPUT_DIR="output"
+        OUTPUT_DIR="./output"
         TARGET_DIR=$(echo "$METADATA" | jq -r '.target_directory')
         BUILD_DIR="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}"
         TARGETS_TO_BUILD=$(echo "$METADATA" | jq --arg packages_to_build "$PACKAGES_TO_BUILD" -r '[.packages[] | select(.name as $n | ($packages_to_build | split(" ") | index($n))) | .targets[] | select(.kind[] | contains("bin")) | .name] | join(" ")')
