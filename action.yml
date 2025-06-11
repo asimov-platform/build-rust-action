@@ -229,7 +229,7 @@ runs:
 
             # Codesign file if needed
             if [ "${{ steps.globals.outputs.should_codesign }}" = "true" ]; then
-              rcodesign sign --pem-file "$CERT_PATH" "$OUTPUT_PATH"
+              rcodesign sign --pem-file "$CERT_PATH" --code-signature-flags runtime "$OUTPUT_PATH"
             fi
 
             FILES+=("$OUTPUT_PATH")
