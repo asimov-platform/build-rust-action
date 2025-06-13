@@ -63,11 +63,15 @@ inputs:
     required: false
     default: "true"
   codesign-cert:
-    description: "Certificate for codesign tool. Only works on macOS. Defaults to empty string."
+    description: "Base64-encoded PKCS12 certificate for codesign tool. Only works on macOS. Defaults to empty string."
     required: false
     default: ""
   codesign-cert-password:
-    description: "Password for the certificate. Defaults to empty string."
+    description: "Base64-encoded password for the certificate. Defaults to empty string."
+    required: false
+    default: ""
+  app-store-connect-api-key:
+    description: "Base64-encoded JSON-serialized App Store Connect API key. Only works on macOS. Defaults to empty string."
     required: false
     default: ""
   upload-artifact:
@@ -124,6 +128,7 @@ runs:
         TARGET_WITH_GLIBC="${{ inputs.target }}${{ inputs.glibc-version != '' && '.' || '' }}${{ inputs.glibc-version }}"
         IS_TARGET_WINDOWS="${{ contains(inputs.target, 'windows') }}"
         SHOULD_CODESIGN="${{ inputs.codesign-cert != '' && contains(inputs.target, 'apple-darwin') }}"
+        SHOULD_NOTARIZE="${{ inputs.app-store-connect-api-key != '' && contains(inputs.target, 'apple-darwin') }}"
         OUTPUT_DIR="output"
         TARGET_DIR=$(echo "$METADATA" | jq -r '.target_directory')
         BUILD_DIR="${TARGET_DIR}/${{ inputs.target }}/${{ inputs.profile }}"
@@ -133,6 +138,7 @@ runs:
         echo "target_with_glibc=$TARGET_WITH_GLIBC" >> $GITHUB_OUTPUT
         echo "is_target_windows=$IS_TARGET_WINDOWS" >> $GITHUB_OUTPUT
         echo "should_codesign=$SHOULD_CODESIGN" >> $GITHUB_OUTPUT
+        echo "should_notarize=$SHOULD_NOTARIZE" >> $GITHUB_OUTPUT
         echo "output_dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
         echo "target_dir=$TARGET_DIR" >> $GITHUB_OUTPUT
         echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
@@ -195,6 +201,16 @@ runs:
           CERT_PATH="${{ runner.temp }}/cert.p12"
           echo "Saving certificate to $CERT_PATH"
           echo "${{ inputs.codesign-cert }}" | base64 -d > "$CERT_PATH"
+
+          CERT_PASSWORD_PATH="${{ runner.temp }}/cert_password.txt"
+          echo "Saving certificate password to $CERT_PASSWORD_PATH"
+          echo "${{ inputs.codesign-cert-password }}" | base64 -d > "$CERT_PASSWORD_PATH"
+        fi
+
+        if [ "${{ steps.globals.outputs.should_notarize }}" = "true" ]; then
+          API_KEY_PATH="${{ runner.temp }}/api_key.json"
+          echo "Saving API key to $API_KEY_PATH"
+          echo "${{ inputs.app-store-connect-api-key }}" | base64 -d > "$API_KEY_PATH"
         fi
 
         EXT="${{ inputs.binary-extension }}"
@@ -233,11 +249,24 @@ runs:
 
             # Codesign file if needed
             if [ "${{ steps.globals.outputs.should_codesign }}" = "true" ]; then
-              rcodesign sign --p12-file "$CERT_PATH" --p12-password "${{ inputs.codesign-cert-password }}" --for-notarization "$OUTPUT_PATH"
+              rcodesign sign --p12-file "$CERT_PATH" --p12-password-file "$CERT_PASSWORD_PATH" --for-notarization "$OUTPUT_PATH"
             fi
 
             FILES+=("$OUTPUT_PATH")
           done
+
+          if [ "${{ steps.globals.outputs.should_notarize }}" = "true" ]; then
+            TEMP_ZIP_PATH="${{ runner.temp }}/$PACKAGE_NAME.zip"
+
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              7z a -tzip "$TEMP_ZIP_PATH" ${FILES[@]}
+            elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
+              zip -j "$TEMP_ZIP_PATH" ${FILES[@]}
+            fi
+
+            rcodesign notary-submit --api-key-file .\key.json --wait "$TEMP_ZIP_PATH"
+            rm "$TEMP_ZIP_PATH"
+          fi
 
           if [ "${{ inputs.compress-artifact }}" = "true" ]; then
             OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$PREFIX$PACKAGE_NAME$SUFFIX"
