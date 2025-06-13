@@ -264,7 +264,7 @@ runs:
               zip -j "$TEMP_ZIP_PATH" ${FILES[@]}
             fi
 
-            rcodesign notary-submit --api-key-file .\key.json --wait "$TEMP_ZIP_PATH"
+            rcodesign notary-submit --api-key-file "$API_KEY_PATH" --wait "$TEMP_ZIP_PATH"
             rm "$TEMP_ZIP_PATH"
           fi
 
