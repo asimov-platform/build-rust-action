@@ -260,7 +260,7 @@ runs:
 
             if [ "$RUNNER_OS" = "Windows" ]; then
               7z a -tzip "$TEMP_ZIP_PATH" ${FILES[@]}
-            elif [ "${{ steps.globals.outputs.is_target_windows }}" = "true" ]; then
+            else
               zip -j "$TEMP_ZIP_PATH" ${FILES[@]}
             fi
 
