@@ -12,6 +12,9 @@ inputs:
   glibc-version:
     description: "Version of GLIBC to link to. Only works on Linux and using zigbuild. Defaults to system default."
     required: false
+  gh-artifact-prefix:
+    description: "Prefix for the output github artifact name. Defaults to empty string."
+    required: false
   artifact-prefix:
     description: "Prefix for the output artifact name. Defaults to empty string."
     required: false
@@ -297,6 +300,6 @@ runs:
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.artifact-prefix }}${{ inputs.target }}${{ inputs.artifact-suffix }}
+        name: ${{ inputs.gh-artifact-prefix }}${{ inputs.artifact-prefix }}${{ inputs.target }}${{ inputs.artifact-suffix }}
         path: ${{ inputs.working-directory }}/${{ steps.globals.outputs.output_dir }}/*
         if-no-files-found: error
