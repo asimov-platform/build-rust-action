@@ -147,7 +147,7 @@ runs:
         echo "root=$(pwd)/MacOSX13.3.sdk/" >> $GITHUB_OUTPUT
     - name: Install zig
       if: ${{ inputs.use-zigbuild == 'true' }}
-      uses: mlugg/setup-zig@v1
+      uses: mlugg/setup-zig@v2
     - name: Install cargo-zigbuild
       if: ${{ inputs.use-zigbuild == 'true' }}
       shell: bash
