@@ -1,5 +1,5 @@
 name: "ASIMOV build rust action"
-author: "ASIMOV by Haltia.AI <support@asimov.so>"
+author: "ASIMOV PROTOCOL <support@asimov.so>"
 description: "Action to help automate building rust crates"
 inputs:
   target:
