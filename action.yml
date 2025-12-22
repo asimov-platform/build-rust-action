@@ -77,6 +77,10 @@ inputs:
     description: "Base64-encoded JSON-serialized App Store Connect API key. Only works on macOS. Defaults to empty string."
     required: false
     default: ""
+  files-to-copy:
+    description: "Files to copy to the output directory (and upload). New line separated. Defaults to empty string."
+    required: false
+    default: ""
   upload-artifact:
     description: "Upload artifact? Defaults to true."
     required: false
@@ -271,7 +275,14 @@ runs:
             rm "$TEMP_ZIP_PATH"
           fi
 
+          if [ "${{ inputs.files-to-copy }}" != "" ]; then
+            for FILE in ${{ inputs.files-to-copy }}; do
+              cp "$FILE" "${{ steps.globals.outputs.output_dir }}/"
+            done
+          fi
+
           if [ "${{ inputs.compress-artifact }}" = "true" ]; then
+            # FIXME: Might collide names. Should probably create in temp and then move to output dir.
             OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$PREFIX$PACKAGE_NAME$SUFFIX"
 
             if [ "$RUNNER_OS" = "Windows" ]; then
