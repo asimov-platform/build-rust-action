@@ -277,7 +277,10 @@ runs:
 
           if [ "${{ inputs.files-to-copy }}" != "" ]; then
             for FILE in ${{ inputs.files-to-copy }}; do
-              cp "$FILE" "${{ steps.globals.outputs.output_dir }}/"
+              FILENAME=$(basename "$FILE")
+              OUTPUT_PATH="${{ steps.globals.outputs.output_dir }}/$FILENAME"
+              cp "$FILE" "$OUTPUT_PATH"
+              FILES+=("$OUTPUT_PATH")
             done
           fi
 
