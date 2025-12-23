@@ -288,6 +288,7 @@ runs:
             done
           fi
 
+          OUTPUT_DIR="${{ steps.globals.outputs.output_dir }}"
           ${{ inputs.pre-compress-pass }}
 
           if [ "${{ inputs.compress-artifact }}" = "true" ]; then
