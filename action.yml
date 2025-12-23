@@ -81,6 +81,10 @@ inputs:
     description: "Files to copy to the output directory (and upload). New line separated. Defaults to empty string."
     required: false
     default: ""
+  pre-compress-pass:
+    description: "Code that will be executed before compressing the artifact. Defaults to empty string."
+    required: false
+    default: ""
   upload-artifact:
     description: "Upload artifact? Defaults to true."
     required: false
@@ -283,6 +287,8 @@ runs:
               FILES+=("$OUTPUT_PATH")
             done
           fi
+
+          ${{ inputs.pre-compress-pass }}
 
           if [ "${{ inputs.compress-artifact }}" = "true" ]; then
             # FIXME: Might collide names. Should probably create in temp and then move to output dir.
