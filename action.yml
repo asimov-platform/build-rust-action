@@ -53,6 +53,10 @@ inputs:
     description: "Use cargo-zigbuild? Defaults to false."
     required: false
     default: "false"
+  use-ndk:
+    description: "Use cargo-ndk? Defaults to false."
+    required: false
+    default: "false"
   extra-build-arguments:
     description: "Extra arguments to pass to cargo build. Defaults to empty string."
     required: false
@@ -180,8 +184,14 @@ runs:
       uses: mlugg/setup-zig@v2
     - name: Install cargo-zigbuild
       if: ${{ inputs.use-zigbuild == 'true' }}
-      shell: bash
-      run: cargo install --locked cargo-zigbuild
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-zigbuild
+    - name: Install cargo-ndk
+      if: ${{ inputs.use-ndk == 'true' }}
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-ndk
     - name: Set Perl environment variables
       if: runner.os == 'Windows'
       shell: pwsh
@@ -192,7 +202,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || 'build' }}"
+        BUILD_ARG="${{ inputs.use-zigbuild == 'true' && 'zigbuild' || inputs.use-ndk == 'true' && 'ndk build' || 'build' }}"
         PACKAGES_TO_BUILD=(${{ steps.globals.outputs.packages_to_build }})
         PACKAGE_ARG="${PACKAGES_TO_BUILD[@]/#/--package }"
         TARGETS_TO_BUILD=(${{ steps.globals.outputs.targets_to_build }})
