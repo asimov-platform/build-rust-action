@@ -209,6 +209,13 @@ runs:
         TARGET_ARG="${TARGETS_TO_BUILD[@]/#/--bin }"
         export SDKROOT="${{ inputs.use-zigbuild == 'true' && steps.macos-sdk.outputs.root || '' }}"
         cargo +${{ steps.toolchain.outputs.name }} $BUILD_ARG --profile ${{ inputs.profile }} $PACKAGE_ARG $TARGET_ARG --target ${{ steps.globals.outputs.target_with_glibc }} ${{ inputs.extra-build-arguments }}
+    - name: Install gtar
+      if: ${{ runner.os == 'macOS' && inputs.compress-artifact == 'true' }}
+      shell: bash
+      run: |
+        if ! command -v gtar >/dev/null; then
+          brew install gnu-tar
+        fi
     - name: Process binaries
       id: process
       shell: bash
